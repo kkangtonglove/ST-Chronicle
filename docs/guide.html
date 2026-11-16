@@ -516,7 +516,7 @@
         <h1>Chronicle</h1>
         <p class="crn-sub">시간축 세계관 확장 · 사용 설명서</p>
         <div class="crn-chips">
-            <span class="crn-chip">버전 <b>3.3.0</b></span>
+            <span class="crn-chip">버전 <b>3.4.0</b></span>
             <span class="crn-chip">대상 <b>SillyTavern 1.14 이상</b></span>
             <span class="crn-chip">PC · 모바일 <b>지원</b></span>
             <span class="crn-chip">라이선스 <b>무료</b></span>
@@ -563,7 +563,10 @@
   <span class="s">스토리</span>   볼드모트가 해리의 피를 사용한 의식으로 육체를 되찾는다.
   <span class="c">인물</span>     세베루스 스네이프 → 이중 첩자 역할로 복귀   <span class="x">[비밀]</span> <span class="m">[대체]</span>
   <span class="r">관계</span>     해리 포터 &amp; 론 위즐리 → …
-  <span class="e">환경</span>     마법부가 볼드모트의 귀환을 부정한다.</pre>
+  <span class="e">환경</span>     마법부가 볼드모트의 귀환을 부정한다.
+
+<span class="k">[1991-09~1998-05]</span>   <span class="m">← 기간형 시점</span>
+  <span class="e">환경</span>     해리 포터는 호그와트 재학 중이다.</pre>
     </section>
 
     <!-- ===================== 03 ===================== -->
@@ -589,6 +592,16 @@
                 <span class="crn-tag">SECRET · REPLACE</span>
                 <h3>비밀 칸과 대체 칸</h3>
                 <p>비밀 칸은 아는 인물을 함께 기록하며, 모르는 인물이 언급하지 않도록 안내문이 자동으로 붙는다. 대체 칸은 그 인물의 현재 상태가 되고, 같은 이름의 이전 칸은 과거 기록(PAST)으로 표시되어 변화 과정이 유지된다.</p>
+            </div>
+            <div class="crn-card">
+                <span class="crn-tag">PERIOD</span>
+                <h3>기간형 시점</h3>
+                <p>날짜를 <code>1970~1981</code> 형식으로 입력하면 그 기간 동안 이어지는 상태가 된다. 기준 시점이 기간 안이면 <code>ongoing</code>, 지나면 <code>ended</code>로 표시되어 삽입된다. 끝나지 않은 상태는 <code>1991~</code>로 입력한다.</p>
+            </div>
+            <div class="crn-card">
+                <span class="crn-tag">CAST</span>
+                <h3>등장 인물 반영</h3>
+                <p>캐릭터 카드, 그룹 멤버, 페르소나 이름과 최근 대화에 나온 인물을 등장 인물로 판정한다. 해당 인물·관계 칸의 점수를 올리거나, 등장 인물의 칸만 삽입한다.</p>
             </div>
             <div class="crn-card">
                 <span class="crn-tag">AI BUILDER</span>
@@ -644,6 +657,7 @@
                     <li>같은 체크박스를 다시 누르면 해제된다.</li>
                     <li>칸마다 있는 번역 버튼으로 외국어 칸을 한국어로 확인한다.</li>
                     <li>입력 내용은 자동 저장된다. 저장 버튼은 없다.</li>
+                    <li>지운 시점과 칸은 <strong>[되돌리기]</strong>로 복구한다. 새로고침 전까지 최대 30개까지 유지된다.</li>
                 </ul>
             </div>
             <picture class="crn-shot">
@@ -763,6 +777,9 @@ Treat every entry as canon. Nothing after 1995-06-24 has happened yet — never 
 Entries marked SECRET are true, but hidden. …
 Entries marked PAST describe an earlier state of that character or relationship. …</span>
 
+<span class="k">[1991-09~1998-05, ongoing]</span>
+<span class="e">Environment:</span> Harry Potter is a student at Hogwarts.
+
 <span class="k">[1991-09-01]</span>
 <span class="s">Story:</span> Harry Potter, Ron Weasley, Hermione Granger and Neville Longbottom are sorted into Gryffindor; Draco Malfoy into Slytherin.
 <span class="c">Character (Quirinus Quirrell)</span> <span class="x">[SECRET]</span><span class="c">:</span> The Defence Against the Dark Arts teacher shares his body with Voldemort's spirit.
@@ -783,8 +800,11 @@ Entries marked PAST describe an earlier state of that character or relationship.
             <table>
                 <tr><th>지원 환경</th><td>SillyTavern 1.14 이상 (1.19.0에서 검증), PC 및 모바일 브라우저</td></tr>
                 <tr><th>시점 형식</th><td><code>2015</code> · <code>2015-06</code> · <code>2015-06-30</code> · <code>-500</code>(기원전). 연·월 단위 시점은 그 기간 전체를 포함한다.</td></tr>
+                <tr><th>기간 형식</th><td><code>1970~1981</code> · <code>1991-09~1998-05</code> · <code>1991~</code>(진행 중). 기준 시점에 따라 ongoing / ended로 표시된다.</td></tr>
                 <tr><th>칸 옵션</th><td>항상(핀), 키워드, 고정 우선도(-100~100), 비밀(아는 인물), 대체, 사용 여부, 번역 보기</td></tr>
                 <tr><th>대체된 이전 칸</th><td>과거 기록으로 표시해서 삽입(기본) / 삽입하지 않음 — 설정 탭에서 선택</td></tr>
+                <tr><th>등장 인물 반영</th><td>끄기 / 등장 인물 우선(기본, +40점) / 등장 인물만 넣기 — 스토리·환경 칸은 영향 없음</td></tr>
+                <tr><th>되돌리기</th><td>삭제한 시점·칸 최대 30개, 새로고침 전까지</td></tr>
                 <tr><th>키워드 판정</th><td>영어: 단어 단위 · 한글 1~2자: 단어 첫머리 · 일본어·중국어 및 한글 3자 이상: 포함 여부 · <code>/정규식/</code></td></tr>
                 <tr><th>삽입 위치</th><td>프롬프트 맨 앞 / 캐릭터 정의 뒤 / 대화 속 지정 깊이. 역할: System · User · Assistant</td></tr>
                 <tr><th>기본 예산</th><td>1,500 토큰 (최신 가중치 60 · 핀 보너스 40 · 키워드 보너스 30 · 스캔 깊이 4)</td></tr>
@@ -807,7 +827,7 @@ Entries marked PAST describe an earlier state of that character or relationship.
         <div class="crn-install">
             <code>https://github.com/kkangtonglove/ST-Chronicle</code>
         </div>
-        <p style="margin-top:12px;">업데이트는 확장 관리 화면의 업데이트 버튼으로 수행한다. 상세 설명은 저장소의 README를 참조한다.</p>
+        <p style="margin-top:12px;">업데이트는 확장 관리 화면의 업데이트 버튼으로 수행한다.</p>
     </section>
 
     <!-- ===================== 09 ===================== -->

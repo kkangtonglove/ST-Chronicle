@@ -216,6 +216,19 @@
                 </select>
                 <small class="chr-hint">[대체]가 켜진 칸보다 이전의 같은 이름 칸을 어떻게 할지 정합니다. '과거 기록'은 변화의 흐름(예: 죽음을 먹는 자 → 첩자 → 이중 첩자)을 남기면서, 최신 칸이 현재 상태임을 AI에게 알려줍니다.</small>
 
+                <div class="chr-sec">등장 인물 반영</div>
+                <select id="chronicle_castmode" class="text_pole">
+                    <option value="off">끄기</option>
+                    <option value="boost">등장 인물 우선 (추천)</option>
+                    <option value="filter">등장 인물만 넣기</option>
+                </select>
+                <div class="chr-slider">
+                    <input id="chronicle_castbonus" type="range" min="0" max="300" step="5">
+                    <span id="chronicle_castbonus_val" class="chr-val"></span>
+                </div>
+                <small class="chr-hint">등장 인물 = 이 채팅의 캐릭터 카드(그룹이면 멤버 전원)와 페르소나 이름, 그리고 최근 대화에 이름이 나온 인물. '우선'은 그 인물들의 인물·관계 칸에 위 점수를 더하고, '만 넣기'는 나머지 인물·관계 칸을 뺍니다. 스토리·환경 칸은 영향을 받지 않습니다.</small>
+
+
                 <hr>
 
                 <div class="chr-sec">지시문</div>

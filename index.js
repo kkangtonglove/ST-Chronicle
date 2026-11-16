@@ -129,6 +129,8 @@ const DEFAULT_SETTINGS = {
     depth: 4,
     role: 0,
     replacedMode: 'past',     // past = keep earlier entries marked PAST | drop = leave them out
+    castMode: 'boost',        // off | boost (raise present characters) | filter (only present characters)
+    castBonus: 40,
 
     header: DEFAULT_HEADER,
     debug: false,
@@ -138,7 +140,7 @@ const DEFAULT_SETTINGS = {
 
 const ADVANCED_KEYS = [
     'tokenBudget', 'recencyWeight', 'constantBonus', 'keywordBonus', 'scanDepth',
-    'position', 'depth', 'role', 'header', 'replacedMode',
+    'position', 'depth', 'role', 'header', 'replacedMode', 'castMode', 'castBonus',
 ];
 
 // ==================================================================
@@ -320,15 +322,53 @@ function startKey(dt) { return dt ? dt.y * 10000 + (dt.m ?? 1) * 100 + (dt.d ?? 
 /** End of the period (for comparing against the current point) */
 function endKey(dt) { return dt ? dt.y * 10000 + (dt.m ?? 12) * 100 + (dt.d ?? 31) : null; }
 
-function nodeKey(node) { return startKey(parseDate(node?.date)); }
+const RANGE_SEP = /\s*[~～〜]\s*/;
 
-function formatDate(str) {
-    const dt = parseDate(str);
-    if (!dt) return String(str ?? '');
+/**
+ * A node date: a point ("1991-09-01") or a period ("1970~1981", open-ended "1991~").
+ * @returns {{start:object, end:object|null, range:boolean}|null}
+ */
+function parseSpan(str) {
+    if (typeof str !== 'string') return null;
+    const t = str.trim();
+    if (!t) return null;
+    const parts = t.split(RANGE_SEP);
+    if (parts.length === 1) {
+        const dt = parseDate(t);
+        return dt ? { start: dt, end: null, range: false } : null;
+    }
+    if (parts.length !== 2) return null;
+    const a = parseDate(parts[0]);
+    if (!a) return null;
+    if (!parts[1]) return { start: a, end: null, range: true };      // still ongoing
+    const b = parseDate(parts[1]);
+    if (!b || endKey(b) < startKey(a)) return null;
+    return { start: a, end: b, range: true };
+}
+
+function nodeKey(node) { return startKey(parseSpan(node?.date)?.start); }
+
+/** Last day a period covers (Infinity for open-ended); null for points */
+function spanEndKey(span) { return span?.range ? (span.end ? endKey(span.end) : Infinity) : null; }
+
+/** 'point' | 'range' (no current point set) | 'ongoing' | 'ended' */
+function spanStatus(span, nowLimit) {
+    if (!span?.range) return 'point';
+    if (nowLimit === null) return 'range';
+    return spanEndKey(span) < nowLimit ? 'ended' : 'ongoing';
+}
+
+function formatPoint(dt) {
     let out = String(dt.y);
     if (dt.m !== null) out += '-' + String(dt.m).padStart(2, '0');
     if (dt.d !== null) out += '-' + String(dt.d).padStart(2, '0');
     return out;
+}
+
+function formatDate(str) {
+    const span = parseSpan(str);
+    if (!span) return String(str ?? '');
+    return span.range ? `${formatPoint(span.start)}~${span.end ? formatPoint(span.end) : ''}` : formatPoint(span.start);
 }
 
 // ==================================================================
@@ -541,12 +581,56 @@ async function countTokens(text) {
     return n;
 }
 
+// ---- characters present in the scene ----
+
+const _tokCache = new Map();
+
+/** Name → lowercase tokens usable for matching (full name + meaningful parts). */
+function nameTokens(name) {
+    const key = String(name || '');
+    let out = _tokCache.get(key);
+    if (out) return out;
+    const full = key.trim().toLowerCase();
+    const parts = full.split(/[\s·.\-_]+/).filter(t => (/^[\x20-\x7E]+$/.test(t) ? t.length >= 3 : [...t].length >= 2));
+    out = [...new Set([full, ...parts].filter(Boolean))];
+    if (_tokCache.size > 4000) _tokCache.clear();
+    _tokCache.set(key, out);
+    return out;
+}
+
+/** People named by a character / relation entry ("A & B" → [A, B]) */
+function participants(block) {
+    if (block.type === 'relation') {
+        return String(block.name || '').split(/\s*(?:&|,|\/|·| and | 와 | 과 | 및 )\s*/i).map(x => x.trim()).filter(Boolean);
+    }
+    return block.name ? [block.name] : [];
+}
+
+/** Names of the characters in this chat (card / group members / persona). */
+function getCastNames() {
+    const ctx = getContext();
+    const names = [];
+    try {
+        if (ctx.groupId) {
+            const group = (ctx.groups || []).find(g => g.id === ctx.groupId);
+            for (const avatar of (group?.members || [])) {
+                const ch = (ctx.characters || []).find(c => c.avatar === avatar);
+                if (ch?.name) names.push(ch.name);
+            }
+        } else if (ctx.characterId !== undefined && ctx.characters?.[ctx.characterId]?.name) {
+            names.push(ctx.characters[ctx.characterId].name);
+        }
+        if (ctx.name1) names.push(ctx.name1);
+    } catch (e) { warn('등장 인물 읽기 실패', e); }
+    return [...new Set(names.filter(Boolean))];
+}
+
 /** Build the chronicle block for the current state. */
 async function buildPacket() {
     const s = getSettings();
     const world = getActiveWorld();
     const conf = getChatConf();
-    const base = { text: '', used: [], dropped: [], excluded: 0, replaced: 0, replacedList: [], replacedMode: s.replacedMode, tokens: 0, pinnedTokens: 0, world, now: conf.now };
+    const base = { text: '', used: [], dropped: [], excluded: 0, replaced: 0, replacedList: [], replacedMode: s.replacedMode, cast: [], castOut: 0, tokens: 0, pinnedTokens: 0, world, now: conf.now };
 
     if (!s.enabled || !world) return base;
 
@@ -557,12 +641,16 @@ async function buildPacket() {
     let excluded = 0;
 
     for (const node of (world.nodes || [])) {
-        const key = nodeKey(node);
-        if (key === null || !Array.isArray(node.blocks)) continue;
+        const span = parseSpan(node?.date);
+        if (!span || !Array.isArray(node.blocks)) continue;
+        const key = startKey(span.start);
         const live = node.blocks.filter(b => b.enabled !== false && String(b.content ?? '').trim());
         if (!live.length) continue;
         if (nowLimit !== null && key > nowLimit) { excluded += live.length; continue; }
-        for (const b of live) candidates.push({ node, block: b.constant === undefined ? { ...b, constant: true } : b, key });
+        const status = spanStatus(span, nowLimit);
+        // recency for scoring: an ongoing period counts as "now"; an ended one as its last day
+        const rkey = status === 'ongoing' ? nowLimit : (span.range && span.end ? startKey(span.end) : key);
+        for (const b of live) candidates.push({ node, block: b.constant === undefined ? { ...b, constant: true } : b, key, rkey, status });
     }
 
     // 2) "replaces earlier": older entries of the same person/pair are superseded.
@@ -591,26 +679,48 @@ async function buildPacket() {
     const rbase = { ...base, excluded, replaced, replacedList };
     if (!candidates.length) return rbase;
 
-    // 3) inclusion (pinned or keyword hit)
+    // 3) inclusion (pinned or keyword hit) + characters present in the scene
     const scanText = getScanText(s.scanDepth);
+    const castMode = s.castMode || 'off';
+    const castTokens = new Set(getCastNames().flatMap(nameTokens));
+    const presentNames = new Set(getCastNames());
+    const isPresent = (block, hit) => {
+        if (hit) return true;
+        let found = false;
+        for (const person of participants(block)) {
+            const toks = nameTokens(person);
+            if (toks.some(t => castTokens.has(t) || (scanText && keywordMatches(t, scanText)))) { presentNames.add(person); found = true; }
+        }
+        return found;
+    };
     const picked = [];
+    let castOut = 0;
     for (const c of candidates) {
         const hit = !c.block.constant || s.keywordBonus ? hasKeywordHit(c.block, scanText) : false;
         if (!c.block.constant && !hit) continue;
-        picked.push({ ...c, hit });
+        let present = false;
+        if (castMode !== 'off' && BLOCK_TYPES[c.block.type]?.named && c.block.name) {
+            present = isPresent(c.block, hit);
+            if (castMode === 'filter' && !present) { castOut++; continue; }
+        }
+        picked.push({ ...c, hit, present });
     }
+    rbase.cast = [...presentNames];
+    rbase.castOut = castOut;
     if (!picked.length) return rbase;
 
     // 4) score — recency by rank (position in the timeline), not by date distance
-    const ranks = [...new Set(picked.map(p => p.key))].sort((a, b) => a - b);
+    const ranks = [...new Set(picked.map(p => p.rkey))].sort((a, b) => a - b);
     const rankOf = new Map(ranks.map((k, i) => [k, i]));
     const denom = Math.max(1, ranks.length - 1);
+    const castBonus = castMode === 'boost' ? Number(s.castBonus || 0) : 0;
     for (const p of picked) {
-        p.recency = ranks.length > 1 ? rankOf.get(p.key) / denom : 1;
+        p.recency = ranks.length > 1 ? rankOf.get(p.rkey) / denom : 1;
         p.score = p.recency * Number(s.recencyWeight || 0)
             + Number(p.block.priority || 0)
             + (p.block.constant ? Number(s.constantBonus || 0) : 0)
-            + (p.hit ? Number(s.keywordBonus || 0) : 0);
+            + (p.hit ? Number(s.keywordBonus || 0) : 0)
+            + (p.present ? castBonus : 0);
     }
 
     // 5) fill the budget by score — the header is part of the budget too
@@ -658,7 +768,13 @@ async function buildPacket() {
     }
 
     const head = makeHead(used.some(p => p.block.secret), used.some(p => p.pastBy));
-    const body = groups.map(g => `[${formatDate(g.node.date)}]\n${g.lines.join('\n')}`).join('\n\n');
+    const statusOf = new Map(used.map(p => [p.node.id, p.status]));
+    const nodeHead = (node) => {
+        const st = statusOf.get(node.id);
+        const d = formatDate(node.date);
+        return st === 'ongoing' ? `[${d}, ongoing]` : st === 'ended' ? `[${d}, ended]` : `[${d}]`;
+    };
+    const body = groups.map(g => `${nodeHead(g.node)}\n${g.lines.join('\n')}`).join('\n\n');
     const text = head + body + '\n</chronicle>';
 
     // header + per-line costs already counted (cached), so no second pass over the whole text
@@ -735,6 +851,7 @@ function exportText(world) {
     out.push(`# 크로니클: ${world.name}`);
     out.push('# [날짜] 아래에 칸 종류(스토리/인물/관계/환경), 그 아래 옵션 줄(키워드:, 우선도:, 아는 사람:)과 내용을 씁니다.');
     out.push('# 칸 옵션: [항상] = 항상 삽입, [비밀] = 비밀, [대체] = 같은 이름의 이전 칸 대체, [꺼짐] = 사용 안 함');
+    out.push('# 기간: [1970~1981] 처럼 쓰면 그 기간 동안 이어지는 상태가 됩니다. 끝나지 않았으면 [1991~]');
     out.push('');
     for (const node of sortNodes(world.nodes || [])) {
         out.push(`[${formatDate(node.date) || node.date}]`);
@@ -783,7 +900,7 @@ function parseText(text) {
     for (const raw of lines) {
         const line = raw.trim();
         const dateM = line.match(/^\[([^\]]+)\]$/);
-        if (dateM && parseDate(dateM[1].trim())) {
+        if (dateM && parseSpan(dateM[1].trim())) {
             finishBlock();
             node = { id: uid(), date: formatDate(dateM[1].trim()), blocks: [] };
             nodes.push(node);
@@ -960,7 +1077,8 @@ function formatSpec(lang, detail, keyLangs) {
         '',
         'Rules:',
         '- date: a point in time written as YYYY, YYYY-MM or YYYY-MM-DD (a leading minus for years before year 0). Use the most precise date the source supports. If the world has no real calendar, number the years from the start of the story (1, 2, 3...) and use those numbers consistently.',
-        '- One node per point in time. Put everything that happens or changes at that time into that node\'s blocks.',
+        '- A state that lasts over a period (a war, a school year, a regime, an occupation) may use a range date "START~END", e.g. "1970~1981"; write "START~" if it has not ended. Use ranges only for lasting states, not for events.',
+        '- One node per point in time (or period). Put everything that happens or changes at that time into that node\'s blocks.',
         '- type: "story" (events), "character" (one person\'s state, actions or changes), "relation" (the state of a relationship between named people), "environment" (world rules, institutions, places, politics, society).',
         '- name: required for "character" (the person\'s name) and "relation" (e.g. "A & B"); empty for "story" and "environment". Use exactly the same spelling every time the same person or pair appears.',
         `- content: 1-3 concise sentences written in ${L}. State the facts as of that point in time; never mention anything from a later date.`,
@@ -1005,7 +1123,7 @@ function aiToNodes(data) {
     const out = [];
     for (const n of (Array.isArray(data?.nodes) ? data.nodes : [])) {
         const date = String(n?.date ?? '').trim();
-        if (!parseDate(date)) continue;
+        if (!parseSpan(date)) continue;
         const blocks = [];
         for (const b of (Array.isArray(n?.blocks) ? n.blocks : [])) {
             let type = String(b?.type || '').toLowerCase();
@@ -1233,6 +1351,9 @@ function refreshPanel() {
     $('#chronicle_depth').val(s.depth);
     $('#chronicle_role').val(String(s.role));
     $('#chronicle_replacedmode').val(s.replacedMode);
+    $('#chronicle_castmode').val(s.castMode);
+    $('#chronicle_castbonus').val(s.castBonus);
+    $('#chronicle_castbonus_val').text(s.castBonus);
     $('#chronicle_header').val(s.header);
     $('#chronicle_debug').prop('checked', !!s.debug);
 
@@ -1248,6 +1369,7 @@ function renderStatus(packet) {
     const parts = [`삽입 ${packet.used.length} · ${packet.tokens} 토큰`];
     if (packet.excluded) parts.push(`미래 차단 ${packet.excluded}`);
     if (packet.replaced) parts.push(packet.replacedMode === 'drop' ? `대체로 제외 ${packet.replaced}` : `과거 기록 ${packet.replaced}`);
+    if (packet.castOut) parts.push(`등장 인물 외 제외 ${packet.castOut}`);
     if (packet.dropped?.length) parts.push(`예산 초과 ${packet.dropped.length}`);
     let text = parts.join('  |  ');
     const budget = Number(getSettings().tokenBudget || 0);
@@ -1444,6 +1566,13 @@ function bindPanel() {
     $('#chronicle_replacedmode').on('change', function () {
         getSettings().replacedMode = String($(this).val()); saveSettings(); updateInjection();
     });
+    $('#chronicle_castmode').on('change', function () {
+        getSettings().castMode = String($(this).val()); saveSettings(); updateInjection();
+    });
+    $('#chronicle_castbonus').on('input', function () {
+        const n = Number($(this).val());
+        getSettings().castBonus = n; $('#chronicle_castbonus_val').text(n); saveSoon(); updateSoon();
+    });
     $('#chronicle_header').on('input', function () {
         getSettings().header = String($(this).val()); saveSoon(); updateSoon();
     });
@@ -1520,6 +1649,8 @@ async function openPreview() {
             ${stat('토큰', `${packet.tokens} / ${s.tokenBudget}`)}
             ${stat('미래 차단', packet.excluded + '개')}
             ${packet.replaced ? stat(packet.replacedMode === 'drop' ? '대체로 제외' : '과거 기록', packet.replaced + '개') : ''}
+            ${getSettings().castMode !== 'off' ? stat('등장 인물', packet.cast.length ? packet.cast.slice(0, 8).join(', ') + (packet.cast.length > 8 ? ` 외 ${packet.cast.length - 8}명` : '') : '없음') : ''}
+            ${packet.castOut ? stat('등장 인물 외 제외', packet.castOut + '개') : ''}
         </div>
         ${over ? `<div class="chr-warnbar"><i class="fa-solid fa-triangle-exclamation"></i>핀(항상) 글만 약 ${packet.pinnedTokens} 토큰으로 예산을 넘습니다.</div>` : ''}
         <div class="chr-preview-tools">
@@ -1869,6 +2000,9 @@ async function fillTranslations($scope) {
 
 let _search = '';
 let _showTr = false;
+/** Deleted nodes / entries that can be restored (newest last) */
+const _undo = [];
+const UNDO_MAX = 30;
 /** Entries translated one by one (shown even when "번역 보기" is off) */
 const _trBlocks = new Set();
 
@@ -1898,6 +2032,7 @@ async function openEditor() {
         <div class="chr-toolbar">
             <div class="menu_button" data-act="add-node"><i class="fa-solid fa-plus"></i> 시점 추가</div>
             <div class="menu_button" data-act="tr" title="영어·외국어 내용을 한국어로 보여줍니다 (보기 전용)"><i class="fa-solid fa-language"></i> 번역 보기</div>
+            <div class="menu_button chr-undo" data-act="undo" title="방금 지운 시점이나 칸을 되살립니다"><i class="fa-solid fa-rotate-left"></i> 되돌리기 <span class="chr-undo-n"></span></div>
             <input type="text" class="text_pole chr-search" placeholder="시점·이름·내용·키워드 검색">
             <span class="chr-nowtag"></span>
             <div class="menu_button" data-act="clear-now" title="기준 시점 해제 (전부 체크)"><i class="fa-solid fa-xmark"></i> 기준 해제</div>
@@ -1911,7 +2046,36 @@ async function openEditor() {
 
     const $root = $(root);
     const $nodes = $root.find('.chr-nodes');
-    const render = () => { renderNodes($nodes, world); if (_showTr || _trBlocks.size) fillTranslations($nodes); };
+    const refreshUndo = () => {
+        const n = _undo.filter(u => u.worldId === world.id).length;
+        $root.find('[data-act="undo"]').toggleClass('chr-disabled', !n).find('.chr-undo-n').text(n ? `(${n})` : '');
+    };
+    const render = () => { renderNodes($nodes, world); refreshUndo(); if (_showTr || _trBlocks.size) fillTranslations($nodes); };
+
+    $root.find('[data-act="undo"]').on('click', () => {
+        const i = _undo.map(u => u.worldId).lastIndexOf(world.id);
+        if (i < 0) return;
+        const [u] = _undo.splice(i, 1);
+        let restoredId = null;
+        if (u.kind === 'node') {
+            world.nodes.splice(Math.min(u.index, world.nodes.length), 0, u.node);
+            restoredId = u.node.id;
+            toast('success', `[${formatDate(u.node.date) || '시점 없음'}] 시점을 되살렸습니다.`);
+        } else {
+            const node = findNode(world, u.nodeId);
+            if (!node) {
+                toast('warning', '이 칸이 있던 시점이 지워져 있습니다. 시점을 먼저 되돌려 주세요.');
+                _undo.splice(i, 0, u);
+                return;
+            }
+            node.blocks.splice(Math.min(u.index, node.blocks.length), 0, u.block);
+            _openGroups.add(groupKey(node.id, u.block.type));
+            restoredId = node.id;
+            toast('success', '칸을 되살렸습니다.');
+        }
+        saveSettings(); render(); updateSoon();
+        if (restoredId) flashNode($nodes, restoredId);
+    });
 
     $root.find('[data-act="tr"]').toggleClass('chr-on', _showTr).on('click', function () {
         _showTr = !_showTr;
@@ -1969,6 +2133,11 @@ function ctxOf($el) {
     return { nodeId: $el.closest('[data-node]').data('node'), blockId: $b.length ? $b.data('block') : null };
 }
 
+function pushUndo(entry) {
+    _undo.push(entry);
+    if (_undo.length > UNDO_MAX) _undo.shift();
+}
+
 function hasShortKey(keys) {
     return (keys || []).some(k => !(k.startsWith('/') && k.endsWith('/') && k.length > 2) && [...k].length === 1);
 }
@@ -1987,13 +2156,16 @@ function bindEditorEvents($nodes, world, render) {
         const { nodeId } = ctxOf($(this));
         const node = findNode(world, nodeId);
         if (!node) return;
-        if (!node.date || parseDate(node.date) === null) {
+        const span = parseSpan(node.date || '');
+        if (!span) {
             toast('warning', '먼저 이 시점의 날짜를 입력해 주세요.');
             return;
         }
+        // a period sets the current point to its first day
+        const point = formatPoint(span.start);
         const cur = getChatConf().now ? endKey(parseDate(getChatConf().now)) : null;
-        const mine = endKey(parseDate(node.date));
-        setChatConf({ now: (cur !== null && cur === mine) ? '' : node.date });
+        const mine = endKey(span.start);
+        setChatConf({ now: (cur !== null && cur === mine && !span.range) ? '' : point });
         render(); refreshPanel(); updateInjection();
     });
 
@@ -2003,14 +2175,14 @@ function bindEditorEvents($nodes, world, render) {
         if (!node) return;
         const v = String($(this).val()).trim();
         node.date = v;
-        $(this).toggleClass('chr-invalid', !!v && parseDate(v) === null);
+        $(this).toggleClass('chr-invalid', !!v && parseSpan(v) === null);
         saveSoon(); updateSoon();
     });
 
     $nodes.on('change', '.chr-date', function () {
         const { nodeId } = ctxOf($(this));
         const node = findNode(world, nodeId);
-        if (node && node.date && parseDate(node.date)) {
+        if (node && node.date && parseSpan(node.date)) {
             node.date = formatDate(node.date);
             $(this).val(node.date).removeClass('chr-invalid');
             saveSoon();
@@ -2106,8 +2278,13 @@ function bindEditorEvents($nodes, world, render) {
         const { nodeId, blockId } = ctxOf($(this));
         const node = findNode(world, nodeId);
         if (!node) return;
-        node.blocks = node.blocks.filter(b => b.id !== blockId);
+        const index = node.blocks.findIndex(b => b.id === blockId);
+        if (index < 0) return;
+        const [block] = node.blocks.splice(index, 1);
+        pushUndo({ kind: 'block', worldId: world.id, nodeId, index, block });
         rerenderBlocks($(this).closest('[data-node]'), node);
+        $nodes.closest('.chr-editor').find('[data-act="undo"]').removeClass('chr-disabled')
+            .find('.chr-undo-n').text(`(${_undo.filter(u => u.worldId === world.id).length})`);
         saveSettings(); updateSoon();
     });
 
@@ -2174,11 +2351,14 @@ function bindEditorEvents($nodes, world, render) {
         const n = (node.blocks || []).length;
         if (n > 0) {
             const ok = await callGenericPopup(
-                `[${formatDate(node.date) || '시점 없음'}] 과 그 안의 글 ${n}개를 삭제합니다. 계속할까요?`, POPUP_TYPE.CONFIRM);
+                `[${formatDate(node.date) || '시점 없음'}] 과 그 안의 글 ${n}개를 삭제합니다.\n(새로고침하기 전까지 편집기의 [되돌리기]로 되살릴 수 있습니다)`, POPUP_TYPE.CONFIRM);
             if (!ok) return;
         }
-        world.nodes = world.nodes.filter(x => x.id !== nodeId);
+        const index = world.nodes.findIndex(x => x.id === nodeId);
+        const [removed] = world.nodes.splice(index, 1);
+        pushUndo({ kind: 'node', worldId: world.id, index, node: removed });
         saveSettings(); render(); updateSoon();
+        toast('info', '시점을 지웠습니다. 위쪽 [되돌리기]로 되살릴 수 있습니다.');
     });
 }
 
@@ -2319,14 +2499,19 @@ function renderNodes($nodes, world) {
     }
 
     const html = shown.map(node => {
-        const dt = parseDate(node.date);
+        const span = parseSpan(node.date || '');
+        const dt = span ? span.start : null;
         const key = nodeKey(node);
         const bad = node.date && dt === null;
         const checked = dt !== null && (nowLimit === null || key <= nowLimit);
-        const boundary = dt !== null && nowLimit !== null && endKey(dt) === nowLimit;
+        const boundary = dt !== null && !span.range && nowLimit !== null && endKey(dt) === nowLimit;
+        const status = span && checked ? spanStatus(span, nowLimit) : 'point'; // future periods get no tag
+        const rangeTag = status === 'ongoing' ? '<span class="chr-node-tag chr-tag-ongoing">진행 중</span>'
+            : status === 'ended' ? '<span class="chr-node-tag chr-tag-ended">종료</span>'
+                : status === 'range' ? '<span class="chr-node-tag chr-tag-ended">기간</span>' : '';
 
         const checkTitle = dt === null
-            ? '날짜를 먼저 입력하세요'
+            ? '날짜를 먼저 입력하세요 (기간은 1970~1981 처럼)'
             : boundary ? '기준 시점 — 다시 누르면 해제'
                 : '여기까지를 기준 시점으로 (맨 위부터 자동 체크)';
 
@@ -2337,8 +2522,8 @@ function renderNodes($nodes, world) {
                     <i class="fa-${checked ? 'solid' : 'regular'} ${checked ? 'fa-square-check' : 'fa-square'}"></i>
                 </div>
                 <input type="text" class="text_pole chr-date ${bad ? 'chr-invalid' : ''}"
-                       value="${esc(node.date)}" placeholder="2015-01-01" title="시점 (2015 / 2015-06 / 2015-06-20)">
-                ${boundary ? '<span class="chr-node-tag">기준 시점</span>' : ''}
+                       value="${esc(node.date)}" placeholder="2015-01-01" title="시점: 2015 / 2015-06 / 2015-06-20 · 기간: 1970~1981 / 끝나지 않음: 1991~">
+                ${boundary ? '<span class="chr-node-tag">기준 시점</span>' : ''}${rangeTag}
                 <div class="chr-node-spacer"></div>
                 <div class="chr-node-actions">
                     <div class="chr-ico" data-act="node-fold" title="이 시점 전부 접기 / 펴기"><i class="fa-solid fa-chevron-down"></i></div>

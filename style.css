@@ -394,8 +394,8 @@
 }
 
 .chr-node-head .chr-date {
-    flex: 0 0 130px;
-    width: 130px;
+    flex: 0 0 190px;
+    width: 190px;
     margin: 0;
     padding: 4px 8px;
     font-family: var(--monoFontFamily, monospace);
@@ -1459,3 +1459,16 @@
 
 .chr-dropped .chr-dim { opacity: 0.6; }
 .chr-replaced { border-top: 1px solid var(--SmartThemeBorderColor); padding-top: 8px; }
+
+/* period tags / undo */
+.chr-node-tag.chr-tag-ongoing {
+    color: var(--chr-character, #9ece6a);
+    background: color-mix(in srgb, var(--chr-character, #9ece6a) 18%, transparent);
+}
+.chr-node-tag.chr-tag-ended {
+    color: inherit;
+    opacity: 0.6;
+    background: rgba(127, 127, 127, 0.18);
+}
+.chr-toolbar .menu_button.chr-disabled { opacity: 0.35; pointer-events: none; }
+.chr-undo-n { font-size: 0.85em; opacity: 0.75; }
