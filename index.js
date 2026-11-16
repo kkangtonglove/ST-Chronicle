@@ -1837,6 +1837,8 @@ async function fillTranslations($scope) {
 
 let _search = '';
 let _showTr = false;
+/** Entries translated one by one (shown even when "번역 보기" is off) */
+const _trBlocks = new Set();
 
 function flashNode($nodes, nodeId) {
     const el = $nodes.find(`[data-node="${nodeId}"]`)[0];
@@ -1877,7 +1879,7 @@ async function openEditor() {
 
     const $root = $(root);
     const $nodes = $root.find('.chr-nodes');
-    const render = () => { renderNodes($nodes, world); if (_showTr) fillTranslations($nodes); };
+    const render = () => { renderNodes($nodes, world); if (_showTr || _trBlocks.size) fillTranslations($nodes); };
 
     $root.find('[data-act="tr"]').toggleClass('chr-on', _showTr).on('click', function () {
         _showTr = !_showTr;
@@ -1945,7 +1947,7 @@ function bindEditorEvents($nodes, world, render) {
 
     const rerenderBlocks = ($node, node) => {
         $node.find('.chr-blocks').html(renderBlocksHtml(node));
-        if (_showTr) fillTranslations($node);
+        if (_showTr || _trBlocks.size) fillTranslations($node);
     };
 
     // current-point checkbox
@@ -2035,6 +2037,27 @@ function bindEditorEvents($nodes, world, render) {
         saveSoon(); updateSoon();
     });
 
+    // translate one entry (view only) — click again to hide
+    $nodes.on('click', '[data-act="block-tr"]', async function () {
+        const { blockId } = ctxOf($(this));
+        const $main = $(this).closest('.chr-block-main');
+        const $tr = $main.children('.chr-tr');
+        if (_trBlocks.has(blockId)) {
+            _trBlocks.delete(blockId);
+            $(this).removeClass('chr-on');
+            if (!_showTr) $tr.remove();
+            return;
+        }
+        const src = String($main.children('.chr-content').val() || '').trim();
+        if (!src) return toast('info', '번역할 내용이 없습니다.');
+        if (isMostlyKorean(src)) return toast('info', '이미 한국어입니다.');
+        _trBlocks.add(blockId);
+        $(this).addClass('chr-on');
+        if (!$tr.length) $('<div class="chr-tr">번역 중…</div>').insertAfter($main.children('.chr-content'));
+        else { $tr[0].dataset.done = ''; $tr.text('번역 중…'); }
+        await fillTranslations($main);
+    });
+
     $nodes.on('click', '[data-act="block-toggle"]', function () {
         const { nodeId, blockId } = ctxOf($(this));
         const block = findBlock(world, nodeId, blockId);
@@ -2063,7 +2086,7 @@ function bindEditorEvents($nodes, world, render) {
         const key = groupKey(nodeId, type);
         if (_openGroups.has(key)) _openGroups.delete(key); else _openGroups.add(key);
         $(this).closest('.chr-group').toggleClass('chr-open', _openGroups.has(key));
-        if (_showTr) fillTranslations($(this).closest('.chr-group'));
+        if (_showTr || _trBlocks.size) fillTranslations($(this).closest('.chr-group'));
     });
 
     $nodes.on('click', '[data-act="node-fold"]', function () {
@@ -2081,7 +2104,7 @@ function bindEditorEvents($nodes, world, render) {
             $(this).toggleClass('chr-open', !anyOpen);
         });
         $(this).find('i').attr('class', `fa-solid ${anyOpen ? 'fa-chevron-down' : 'fa-chevron-up'}`);
-        if (_showTr && !anyOpen) fillTranslations($node);
+        if ((_showTr || _trBlocks.size) && !anyOpen) fillTranslations($node);
     });
 
     $nodes.on('click', '[data-add]', function () {
@@ -2162,7 +2185,7 @@ function renderOneBlock(b) {
         <div class="chr-block-label"><i class="fa-solid ${t.icon}" style="font-size:.85em;"></i>${label}</div>
         <div class="chr-block-main">
             <textarea class="text_pole chr-content" rows="2" placeholder="프롬프트에 들어갈 내용">${esc(b.content)}</textarea>
-            ${_showTr ? '<div class="chr-tr">번역 중…</div>' : ''}
+            ${_showTr || _trBlocks.has(b.id) ? '<div class="chr-tr">번역 중…</div>' : ''}
             <div class="chr-block-opts">
                 <div class="chr-pin ${b.constant ? 'chr-on' : ''}" title="${b.constant
         ? '핀 켜짐 — 항상 삽입됩니다 (누르면 끔)'
@@ -2173,6 +2196,7 @@ function renderOneBlock(b) {
                 <input type="number" class="text_pole chr-pri" value="${b.priority}" min="-100" max="100" step="5" title="고정 우선도">
                 <div class="chr-ico chr-tog ${b.secret ? 'chr-on' : ''}" data-act="secret" title="비밀 — 사실이지만 대부분의 인물이 모름"><i class="fa-solid fa-user-secret"></i></div>
                 ${t.named ? `<div class="chr-ico chr-tog ${b.replaces ? 'chr-on' : ''}" data-act="replaces" title="이전 칸 대체 — 켜면 같은 이름의 더 이전 칸은 넣지 않음"><i class="fa-solid fa-arrows-rotate"></i></div>` : ''}
+                <div class="chr-ico chr-tog ${_trBlocks.has(b.id) ? 'chr-on' : ''}" data-act="block-tr" title="이 칸만 한국어로 보기 (보기 전용)"><i class="fa-solid fa-language"></i></div>
                 <div class="chr-ico" data-act="block-toggle" title="${b.enabled ? '사용 중 (누르면 끔)' : '꺼짐 (누르면 켬)'}">
                     <i class="fa-solid ${b.enabled ? 'fa-eye' : 'fa-eye-slash'}"></i>
                 </div>
