@@ -206,6 +206,7 @@ function initSettings() {
         w.id = w.id || uid();
         w.name = String(w.name ?? '새 세계관');
         w.nodes = (w.nodes || []).map(normalizeNode);
+        normalizeWorldOpts(w);
         return w;
     });
 
@@ -230,8 +231,24 @@ function getWorldById(id) {
     return getWorlds().find(w => w.id === id) || null;
 }
 
+/** Per-world overrides of global options */
+function normalizeWorldOpts(w) {
+    if (!['global', 'on', 'off'].includes(w.compressMode)) w.compressMode = 'global';
+    const k = Number(w.compressKeep);
+    w.compressKeep = Number.isFinite(k) && k >= 1 ? Math.floor(k) : null;
+    return w;
+}
+
+/** Effective "compress older entries" options for a world */
+function compressOpts(world) {
+    const s = getSettings();
+    const on = world?.compressMode === 'on' ? true : world?.compressMode === 'off' ? false : !!s.compressOld;
+    const keep = Math.max(1, Number(world?.compressKeep) || Number(s.compressKeep) || 12);
+    return { on, keep };
+}
+
 function createWorld(name) {
-    const world = { id: uid(), name: name || '새 세계관', nodes: [] };
+    const world = { id: uid(), name: name || '새 세계관', nodes: [], compressMode: 'global', compressKeep: null };
     getWorlds().push(world);
     getSettings().activeWorldId = world.id;
     saveSettings();
@@ -711,8 +728,9 @@ async function buildPacket() {
     const rbase = { ...base, excluded, replaced, replacedList, compressed: 0 };
 
     // 2b) optional: older points go in as their first sentence only
-    if (s.compressOld) {
-        const keep = Math.max(1, Number(s.compressKeep) || 12);
+    const comp = compressOpts(world);
+    if (comp.on) {
+        const keep = comp.keep;
         const recent = [...new Set(candidates.map(c => c.rkey))].sort((a, b) => b - a);
         if (recent.length > keep) {
             const threshold = recent[keep - 1];
@@ -1384,6 +1402,7 @@ function refreshPanel() {
 
     $('#chronicle_enabled').prop('checked', !!s.enabled);
     fillWorldSelect($('#chronicle_world_select'), s.activeWorldId);
+    refreshWorldOpts();
     fillWorldSelect($('#chronicle_chat_world'), conf.worldId, { allowNone: true });
     $('#chronicle_now_display')
         .text(conf.now ? formatDate(conf.now) : '제한 없음')
@@ -1411,6 +1430,18 @@ function refreshPanel() {
     $('#chronicle_debug').prop('checked', !!s.debug);
 
     refreshAiPanel();
+}
+
+function refreshWorldOpts() {
+    const w = getEditingWorld();
+    const s = getSettings();
+    $('#chronicle_world_opts').toggle(!!w);
+    if (!w) return;
+    $('#chronicle_world_compress').val(w.compressMode || 'global');
+    $('#chronicle_world_keep').val(w.compressKeep ?? '').attr('placeholder', `기본 ${s.compressKeep}`);
+    const eff = compressOpts(w);
+    $('#chronicle_world_keep_row').toggle(w.compressMode !== 'off');
+    $('#chronicle_world_compress_eff').text(eff.on ? `지금: 켜짐 · 최근 ${eff.keep}개 시점 전문` : '지금: 꺼짐 · 전부 전문');
 }
 
 function renderStatus(packet) {
@@ -1443,6 +1474,9 @@ async function importFile(file) {
         const w = createWorld(data.name || baseName);
         if (Array.isArray(data.nodes)) {
             w.nodes = data.nodes.map(normalizeNode);
+            w.compressMode = data.compressMode;
+            w.compressKeep = data.compressKeep;
+            normalizeWorldOpts(w);
         } else if (Array.isArray(data.entries) || Array.isArray(data)) {
             w.entries = Array.isArray(data) ? data : data.entries;
             migrateWorld(w);
@@ -1472,6 +1506,22 @@ function bindPanel() {
     $('#chronicle_world_select').on('change', function () {
         getSettings().activeWorldId = String($(this).val() || '') || null;
         saveSettings();
+        refreshWorldOpts();
+    });
+    $('#chronicle_world_compress').on('change', function () {
+        const w = getEditingWorld();
+        if (!w) return;
+        w.compressMode = String($(this).val());
+        saveSettings(); refreshWorldOpts(); updateInjection();
+    });
+    $('#chronicle_world_keep').on('input', function () {
+        const w = getEditingWorld();
+        if (!w) return;
+        const v = String($(this).val()).trim();
+        const n = Number(v);
+        w.compressKeep = v && Number.isFinite(n) && n >= 1 ? Math.floor(n) : null;
+        saveSoon(); updateSoon();
+        $('#chronicle_world_compress_eff').text((() => { const e = compressOpts(w); return e.on ? `지금: 켜짐 · 최근 ${e.keep}개 시점 전문` : '지금: 꺼짐 · 전부 전문'; })());
     });
 
     $('#chronicle_world_new').on('click', async () => {
@@ -1530,7 +1580,7 @@ function bindPanel() {
         if (choice === null || choice === undefined) return;
         const safe = w.name.replace(/[\\/:*?"<>|]/g, '_');
         if (choice) {
-            const payload = { chronicle: STORE_VERSION, name: w.name, nodes: (w.nodes || []).map(normalizeNode) };
+            const payload = { chronicle: STORE_VERSION, name: w.name, compressMode: w.compressMode, compressKeep: w.compressKeep, nodes: (w.nodes || []).map(normalizeNode) };
             download(JSON.stringify(payload, null, 2), `chronicle-${safe}.json`, 'application/json');
         } else {
             download(exportText(w), `chronicle-${safe}.txt`, 'text/plain');
@@ -1621,11 +1671,11 @@ function bindPanel() {
         getSettings().replacedMode = String($(this).val()); saveSettings(); updateInjection();
     });
     $('#chronicle_compress').on('change', function () {
-        getSettings().compressOld = !!$(this).prop('checked'); saveSettings(); updateInjection();
+        getSettings().compressOld = !!$(this).prop('checked'); saveSettings(); refreshWorldOpts(); updateInjection();
     });
     $('#chronicle_compresskeep').on('input', function () {
         const n = Number($(this).val());
-        if (Number.isFinite(n) && n >= 1) { getSettings().compressKeep = n; saveSoon(); updateSoon(); }
+        if (Number.isFinite(n) && n >= 1) { getSettings().compressKeep = n; saveSoon(); updateSoon(); refreshWorldOpts(); }
     });
     $('#chronicle_castmode').on('change', function () {
         getSettings().castMode = String($(this).val()); saveSettings(); updateInjection();

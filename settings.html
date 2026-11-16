@@ -43,6 +43,23 @@
                     <input id="chronicle_import_file" type="file" accept=".json,.txt,.md" hidden>
                 </div>
 
+                <div id="chronicle_world_opts" class="chr-worldopts">
+                    <div class="chr-row">
+                        <span class="chr-key">줄여 넣기</span>
+                        <select id="chronicle_world_compress" class="text_pole">
+                            <option value="global">기본값 따름 (설정 탭)</option>
+                            <option value="on">이 세계관은 켜기</option>
+                            <option value="off">이 세계관은 끄기</option>
+                        </select>
+                    </div>
+                    <div class="chr-row" id="chronicle_world_keep_row">
+                        <span class="chr-key">전문 유지</span>
+                        <input id="chronicle_world_keep" type="number" class="text_pole" min="1" max="500" step="1">
+                        <span class="chr-key">개 시점</span>
+                    </div>
+                    <small id="chronicle_world_compress_eff" class="chr-hint"></small>
+                </div>
+
                 <div id="chronicle_open_editor" class="menu_button chr-wide chr-primary">
                     <i class="fa-solid fa-timeline"></i> 타임라인 편집기
                 </div>
@@ -168,14 +185,14 @@
 
                 <label class="checkbox_label" for="chronicle_compress">
                     <input id="chronicle_compress" type="checkbox">
-                    <span>오래된 칸 줄여 넣기</span>
+                    <span>오래된 칸 줄여 넣기 (기본값)</span>
                 </label>
                 <div class="chr-row">
                     <span class="chr-key">전문 유지</span>
                     <input id="chronicle_compresskeep" type="number" class="text_pole" min="1" max="500" step="1">
                     <span class="chr-key">개 시점</span>
                 </div>
-                <small class="chr-hint">켜면 가장 최근 시점 몇 개만 내용 전체를 넣고, 그보다 오래된 칸은 첫 문장만 넣습니다. 진행 중인 기간은 최근으로 칩니다. 토큰을 크게 줄입니다.</small>
+                <small class="chr-hint">켜면 가장 최근 시점 몇 개만 내용 전체를 넣고, 그보다 오래된 칸은 첫 문장만 넣습니다. 진행 중인 기간은 최근으로 칩니다. 토큰을 크게 줄입니다. 세계관마다 다르게 하려면 타임라인 탭의 세계관 아래에서 바꾸세요.</small>
 
                 <div class="chr-sec">최신 우선 가중치</div>
                 <div class="chr-slider">

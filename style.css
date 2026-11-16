@@ -1518,3 +1518,11 @@
     .chr-node-head .chr-node-tag { order: 2; }
     .chr-node-head .chr-node-actions { order: 3; }
 }
+
+#chronicle_settings .chr-worldopts {
+    margin: 2px 0 10px;
+    padding: 8px 10px 4px;
+    border-radius: 8px;
+    background: rgba(127, 127, 127, 0.08);
+}
+#chronicle_settings .chr-worldopts .chr-hint { margin-bottom: 4px; }
