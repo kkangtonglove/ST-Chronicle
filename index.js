@@ -597,8 +597,16 @@ async function buildPacket() {
             + (p.hit ? Number(s.keywordBonus || 0) : 0);
     }
 
-    // 5) fill the budget by score
-    const budget = Math.max(0, Number(s.tokenBudget || 0));
+    // 5) fill the budget by score — the header is part of the budget too
+    const nowLabel = conf.now ? formatDate(conf.now) : 'unrestricted';
+    const baseHeader = String(s.header || '').replaceAll('{{now}}', nowLabel).trim();
+    const makeHead = (withSecret) => {
+        const h = withSecret ? (baseHeader ? baseHeader + '\n' : '') + SECRET_NOTE : baseHeader;
+        return `<chronicle current_time="${esc(nowLabel)}">\n` + (h ? h + '\n\n' : '');
+    };
+    const anySecret = picked.some(p => p.block.secret);
+    const reserve = await countTokens(makeHead(anySecret) + '\n</chronicle>');
+    const budget = Math.max(0, Number(s.tokenBudget || 0) - reserve);
     const byScore = [...picked].sort((a, b) => (b.score - a.score) || (b.key - a.key));
     const used = [], dropped = [];
     const seenNodes = new Set();
@@ -634,16 +642,12 @@ async function buildPacket() {
         g.lines.push(p.line);
     }
 
-    const nowLabel = conf.now ? formatDate(conf.now) : 'unrestricted';
-    let header = String(s.header || '').replaceAll('{{now}}', nowLabel).trim();
-    if (used.some(p => p.block.secret)) header = (header ? header + '\n' : '') + SECRET_NOTE;
+    const head = makeHead(used.some(p => p.block.secret));
     const body = groups.map(g => `[${formatDate(g.node.date)}]\n${g.lines.join('\n')}`).join('\n\n');
-
-    const head = `<chronicle current_time="${esc(nowLabel)}">\n` + (header ? header + '\n\n' : '');
     const text = head + body + '\n</chronicle>';
 
     // header + per-line costs already counted (cached), so no second pass over the whole text
-    const tokens = total + await countTokens(head) + 4;
+    const tokens = total + await countTokens(head + '\n</chronicle>');
     return { text, used, dropped, excluded, replaced, tokens, pinnedTokens, world, now: conf.now };
 }
 

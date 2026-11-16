@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chronicle — SillyTavern 시간축 세계관 확장 사용 설명서</title>
+<style>
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css');
+
+/* =========================================================
+   Chronicle guide — every rule is scoped to .crn
+   (safe to paste into a board post without touching its styles)
+   ========================================================= */
+.crn {
+    --bg: #0f1012;
+    --panel: #17181b;
+    --panel-2: #1d1f23;
+    --line: #2a2c31;
+    --text: #e6e3dc;
+    --sub: #a4a09a;
+    --dim: #6f6c67;
+    --amber: #e3a23b;
+    --amber-soft: rgba(227, 162, 59, 0.12);
+    --story: #7aa2f7;
+    --character: #9ece6a;
+    --relation: #f7768e;
+    --environment: #e0af68;
+    --secret: #bb9af7;
+    --mono: 'JetBrains Mono', 'D2Coding', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+    box-sizing: border-box;
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 0 0 48px;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+    font-size: 16px;
+    line-height: 1.7;
+    word-break: keep-all;
+    overflow-wrap: break-word;
+    -webkit-font-smoothing: antialiased;
+}
+
+.crn *, .crn *::before, .crn *::after { box-sizing: inherit; }
+.crn img { display: block; max-width: 100%; height: auto; }
+.crn a { color: var(--amber); text-decoration: none; border-bottom: 1px solid rgba(227, 162, 59, 0.35); }
+.crn code, .crn kbd {
+    font-family: var(--mono);
+    font-size: 0.86em;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: #24262b;
+    color: #f0d9a8;
+}
+
+/* ---------- hero ---------- */
+
+.crn-hero {
+    position: relative;
+    padding: 56px 40px 40px;
+    border-bottom: 1px solid var(--line);
+    background:
+        radial-gradient(900px 380px at 85% -10%, rgba(227, 162, 59, 0.16), transparent 70%),
+        radial-gradient(600px 300px at 0% 110%, rgba(122, 162, 247, 0.08), transparent 70%);
+    overflow: hidden;
+}
+
+.crn-label {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.18em;
+    color: var(--amber);
+    text-transform: uppercase;
+}
+
+.crn-hero h1 {
+    margin: 10px 0 6px;
+    font-size: clamp(40px, 7vw, 72px);
+    line-height: 1.02;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+}
+
+.crn-hero .crn-sub {
+    margin: 0 0 22px;
+    font-size: clamp(17px, 2.2vw, 21px);
+    color: var(--sub);
+    font-weight: 500;
+}
+
+.crn-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 30px; }
+
+.crn-chip {
+    font-size: 13px;
+    padding: 5px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: var(--panel);
+    color: var(--sub);
+    white-space: nowrap;
+}
+
+.crn-chip b { color: var(--text); font-weight: 600; }
+
+.crn-hero-stage {
+    position: relative;
+    padding: 0 150px 40px 0;
+}
+
+.crn-hero-pc {
+    width: 100%;
+    max-height: 560px;
+    object-fit: cover;
+    object-position: top;
+    border-radius: 14px;
+    border: 1px solid var(--line);
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55);
+}
+
+.crn-hero-phone {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 250px;
+    border-radius: 30px;
+    border: 7px solid #26282d;
+    outline: 1px solid #3a3d44;
+    box-shadow: 0 30px 70px rgba(0, 0, 0, 0.7);
+}
+
+/* ---------- sections ---------- */
+
+.crn-sec { padding: 56px 40px 8px; }
+
+.crn-sec-head {
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    margin-bottom: 18px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--line);
+}
+
+.crn-num {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--amber);
+    letter-spacing: 0.1em;
+}
+
+.crn-sec h2 {
+    margin: 0;
+    font-size: clamp(22px, 3vw, 28px);
+    font-weight: 700;
+    letter-spacing: -0.01em;
+}
+
+.crn-sec h3 {
+    margin: 0 0 6px;
+    font-size: 17px;
+    font-weight: 700;
+}
+
+.crn-sec p { margin: 0 0 14px; color: var(--sub); }
+.crn-sec p strong, .crn-sec li strong { color: var(--text); }
+
+.crn-lead {
+    font-size: 18px;
+    color: var(--text) !important;
+}
+
+.crn ul.crn-list { margin: 0 0 14px; padding-left: 0; list-style: none; }
+
+.crn ul.crn-list li {
+    position: relative;
+    padding-left: 18px;
+    margin-bottom: 6px;
+    color: var(--sub);
+}
+
+.crn ul.crn-list li::before {
+    content: '';
+    position: absolute;
+    left: 2px;
+    top: 0.72em;
+    width: 6px;
+    height: 6px;
+    background: var(--amber);
+}
+
+/* ---------- timeline diagram ---------- */
+
+.crn-diagram {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0;
+    margin: 18px 0 8px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--panel);
+}
+
+.crn-axis {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    border-bottom: 1px solid var(--line);
+}
+
+.crn-axis div {
+    position: relative;
+    padding: 14px 10px 12px;
+    text-align: center;
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--text);
+    border-right: 1px solid var(--line);
+}
+
+.crn-axis div:last-child { border-right: none; }
+.crn-axis small { display: block; font-family: inherit; font-size: 11px; color: var(--dim); margin-top: 2px; }
+
+.crn-axis .is-now {
+    background: var(--amber-soft);
+    color: var(--amber);
+    font-weight: 700;
+}
+
+.crn-axis .is-future { color: var(--dim); background: repeating-linear-gradient(135deg, transparent 0 6px, rgba(255,255,255,0.025) 6px 12px); }
+.crn-axis .is-future s { text-decoration-color: rgba(255,255,255,0.3); }
+
+.crn-diagram-foot {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 6px 16px;
+    padding: 10px 14px;
+    font-size: 13px;
+    color: var(--sub);
+}
+
+.crn-diagram-foot .ok { color: var(--character); }
+.crn-diagram-foot .ng { color: var(--dim); }
+
+.crn-types {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin: 18px 0 6px;
+}
+
+.crn-type {
+    padding: 14px 14px 12px;
+    border-radius: 10px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-top: 3px solid var(--c);
+}
+
+.crn-type b { display: block; color: var(--c); font-size: 15px; }
+.crn-type span { display: block; font-family: var(--mono); font-size: 11px; color: var(--dim); margin-bottom: 6px; }
+.crn-type p { margin: 0; font-size: 14px; line-height: 1.55; }
+
+/* ---------- feature grid ---------- */
+
+.crn-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+}
+
+.crn-card {
+    padding: 20px 20px 16px;
+    border-radius: 12px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+}
+
+.crn-card .crn-tag {
+    display: inline-block;
+    margin-bottom: 8px;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    color: var(--amber);
+}
+
+.crn-card p { margin: 0; font-size: 15px; line-height: 1.65; }
+
+/* ---------- step rows with screenshots ---------- */
+
+.crn-step {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
+    gap: 28px;
+    align-items: start;
+    padding: 26px 0;
+    border-bottom: 1px dashed var(--line);
+}
+
+.crn-step:last-child { border-bottom: none; }
+
+.crn-step-no {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    margin-bottom: 10px;
+    border-radius: 6px;
+    background: var(--amber);
+    color: #1a1308;
+    font-family: var(--mono);
+    font-weight: 700;
+    font-size: 14px;
+}
+
+.crn-shot {
+    margin: 0;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    background: #111;
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+}
+
+.crn-shot.is-narrow { max-width: 360px; justify-self: center; }
+
+.crn-shot figcaption {
+    padding: 8px 12px;
+    font-size: 12px;
+    color: var(--dim);
+    border-top: 1px solid var(--line);
+    background: var(--panel);
+}
+
+.crn-status {
+    padding: 18px;
+    border-radius: 12px;
+    border: 1px solid var(--line);
+    background: var(--panel);
+}
+
+.crn-status-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--line);
+    font-size: 14px;
+    color: var(--sub);
+}
+
+.crn-status-row b { color: var(--text); font-weight: 600; }
+.crn-status-row b.is-amber { color: var(--amber); font-family: var(--mono); }
+
+.crn-status-line {
+    margin-top: 14px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: #222428;
+    font-size: 13.5px;
+    color: var(--sub);
+}
+
+.crn-status-cap { margin-top: 8px; font-size: 12px; color: var(--dim); }
+
+/* ---------- table ---------- */
+
+.crn-table-wrap { overflow-x: auto; margin: 6px 0 16px; border: 1px solid var(--line); border-radius: 10px; }
+
+.crn table { width: 100%; border-collapse: collapse; font-size: 14.5px; }
+
+.crn th, .crn td {
+    padding: 11px 14px;
+    text-align: left;
+    vertical-align: top;
+    border-bottom: 1px solid var(--line);
+}
+
+.crn tr:last-child th, .crn tr:last-child td { border-bottom: none; }
+
+.crn th {
+    width: 28%;
+    font-weight: 600;
+    color: var(--text);
+    background: var(--panel-2);
+    white-space: nowrap;
+}
+
+.crn td { color: var(--sub); background: var(--panel); }
+
+/* ---------- code ---------- */
+
+.crn pre {
+    margin: 10px 0 16px;
+    padding: 18px 20px;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+    background: #0b0c0e;
+    color: #d8d4cc;
+    font-family: var(--mono);
+    font-size: 13px;
+    line-height: 1.65;
+    white-space: pre-wrap;
+    word-break: break-word;
+    overflow-x: auto;
+}
+
+.crn pre .k { color: var(--amber); }
+.crn pre .s { color: var(--story); }
+.crn pre .c { color: var(--character); }
+.crn pre .r { color: var(--relation); }
+.crn pre .e { color: var(--environment); }
+.crn pre .x { color: var(--secret); }
+.crn pre .m { color: var(--dim); }
+
+/* ---------- notes ---------- */
+
+.crn-note {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 12px;
+    padding: 14px 16px;
+    margin: 0 0 10px;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--c, var(--amber));
+    background: var(--panel);
+}
+
+.crn-note .crn-note-t {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    color: var(--c, var(--amber));
+    padding-top: 2px;
+    white-space: nowrap;
+}
+
+.crn-note p { margin: 0; font-size: 15px; }
+
+.crn-install {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 16px 18px;
+    border-radius: 12px;
+    border: 1px solid rgba(227, 162, 59, 0.4);
+    background: var(--amber-soft);
+}
+
+.crn-install code {
+    flex: 1 1 320px;
+    padding: 10px 12px;
+    font-size: 14px;
+    background: #0b0c0e;
+    color: var(--amber);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    overflow-wrap: anywhere;
+}
+
+.crn-foot {
+    margin-top: 48px;
+    padding: 22px 40px 0;
+    border-top: 1px solid var(--line);
+    font-size: 13px;
+    color: var(--dim);
+}
+
+/* ---------- tablet ---------- */
+
+@media (max-width: 860px) {
+    .crn-hero, .crn-sec { padding-left: 24px; padding-right: 24px; }
+    .crn-hero-stage { padding-right: 90px; }
+    .crn-hero-phone { width: 180px; border-width: 5px; border-radius: 22px; }
+    .crn-step { grid-template-columns: 1fr; gap: 16px; }
+    .crn-types { grid-template-columns: repeat(2, 1fr); }
+    .crn-foot { padding-left: 24px; padding-right: 24px; }
+}
+
+/* ---------- phone ---------- */
+
+@media (max-width: 560px) {
+    .crn { font-size: 15px; }
+    .crn-hero { padding: 40px 18px 28px; }
+    .crn-hero-stage { padding: 0; }
+    .crn-hero-pc { display: none; }
+    .crn-hero-phone { position: static; width: 78%; margin: 0 auto; }
+    .crn-sec { padding: 44px 18px 4px; }
+    .crn-grid { grid-template-columns: 1fr; }
+    .crn-axis { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+    .crn-axis div { padding: 12px 2px 10px; font-size: 11px; }
+    .crn-axis small { font-size: 10px; }
+    .crn-shot.is-narrow { max-width: 100%; }
+    .crn th { width: auto; white-space: normal; }
+    .crn th, .crn td { display: block; width: 100%; }
+    .crn th { border-bottom: none; padding-bottom: 2px; }
+    .crn pre { font-size: 12px; padding: 14px; }
+    .crn-note { grid-template-columns: 1fr; gap: 4px; }
+    .crn-foot { padding: 20px 18px 0; }
+}
+</style>
+</head>
+<body style="margin:0;background:#0f1012;">
+
+<article class="crn">
+
+    <!-- ===================== HERO ===================== -->
+    <header class="crn-hero">
+        <span class="crn-label">SillyTavern Extension · User Guide</span>
+        <h1>Chronicle</h1>
+        <p class="crn-sub">시간축 세계관 확장 · 사용 설명서</p>
+        <div class="crn-chips">
+            <span class="crn-chip">버전 <b>3.2.1</b></span>
+            <span class="crn-chip">대상 <b>SillyTavern 1.14 이상</b></span>
+            <span class="crn-chip">PC · 모바일 <b>지원</b></span>
+            <span class="crn-chip">라이선스 <b>무료</b></span>
+        </div>
+        <div class="crn-hero-stage">
+            <img class="crn-hero-pc" src="https://raw.githubusercontent.com/kkangtonglove/ST-Chronicle/main/docs/img/pc_ai_result.webp" alt="PC 화면: AI 연대기 생성 결과 미리보기">
+            <img class="crn-hero-phone" src="https://raw.githubusercontent.com/kkangtonglove/ST-Chronicle/main/docs/img/m_editor.webp" alt="휴대폰 화면: 타임라인 편집기, 기준 시점 1995-06-24">
+        </div>
+    </header>
+
+    <!-- ===================== 01 ===================== -->
+    <section class="crn-sec">
+        <div class="crn-sec-head"><span class="crn-num">01</span><h2>개요</h2></div>
+        <p class="crn-lead">Chronicle은 세계관의 사건을 <strong>시점</strong> 단위로 기록하고, 채팅마다 지정한 <strong>기준 시점</strong>까지의 기록만 프롬프트에 삽입하는 SillyTavern 확장이다.</p>
+        <p>기준 시점 이후의 기록은 모델에 전달되지 않는다. 따라서 모델은 아직 일어나지 않은 사건을 언급하거나 암시할 수 없다. 하나의 세계관으로 서로 다른 시점의 채팅을 동시에 운용할 수 있다.</p>
+
+        <div class="crn-diagram" role="img" aria-label="기준 시점 차단 예시">
+            <div class="crn-axis">
+                <div>1981<small>고드릭 골짜기</small></div>
+                <div>1991<small>호그와트 입학</small></div>
+                <div class="is-now">1995-06-24<small>기준 시점</small></div>
+                <div class="is-future"><s>1996</s><small>신비부 전투</small></div>
+                <div class="is-future"><s>1998</s><small>호그와트 전투</small></div>
+            </div>
+            <div class="crn-diagram-foot">
+                <span class="ok">■ 삽입 대상: 기준 시점까지</span>
+                <span class="ng">■ 차단: 기준 시점 이후 전부</span>
+            </div>
+        </div>
+        <p style="font-size:14px;color:var(--dim);">예시: 기준 시점을 1995-06-24(볼드모트 부활)로 지정하면, 모델은 이후의 신비부 전투와 호그와트 전투를 알지 못한다.</p>
+    </section>
+
+    <!-- ===================== 02 ===================== -->
+    <section class="crn-sec">
+        <div class="crn-sec-head"><span class="crn-num">02</span><h2>기록 구조</h2></div>
+        <p>시점 하나에 네 종류의 칸을 원하는 만큼 둔다. 인물·관계 칸은 이름을 가진다.</p>
+        <div class="crn-types">
+            <div class="crn-type" style="--c:var(--story)"><b>스토리</b><span>Story</span><p>그 시점에 일어난 사건</p></div>
+            <div class="crn-type" style="--c:var(--character)"><b>인물</b><span>Character</span><p>한 인물의 상태·행동·변화</p></div>
+            <div class="crn-type" style="--c:var(--relation)"><b>관계</b><span>Relationship</span><p>두 인물 이상의 관계 상태</p></div>
+            <div class="crn-type" style="--c:var(--environment)"><b>환경</b><span>Environment</span><p>제도·장소·정세·세계 규칙</p></div>
+        </div>
+        <pre><span class="k">[1995-06-24]</span>
+  <span class="s">스토리</span>   볼드모트가 해리의 피를 사용한 의식으로 육체를 되찾는다.
+  <span class="c">인물</span>     세베루스 스네이프 → 이중 첩자 역할로 복귀   <span class="x">[비밀]</span> <span class="m">[대체]</span>
+  <span class="r">관계</span>     해리 포터 &amp; 론 위즐리 → …
+  <span class="e">환경</span>     마법부가 볼드모트의 귀환을 부정한다.</pre>
+    </section>
+
+    <!-- ===================== 03 ===================== -->
+    <section class="crn-sec">
+        <div class="crn-sec-head"><span class="crn-num">03</span><h2>주요 기능</h2></div>
+        <div class="crn-grid">
+            <div class="crn-card">
+                <span class="crn-tag">TIME CUT-OFF</span>
+                <h3>기준 시점 차단</h3>
+                <p>편집기에서 시점의 체크박스를 누르면 그 시점이 기준이 된다. 처음부터 해당 시점까지 자동으로 체크되며, 이후 시점은 흐리게 표시되고 삽입에서 제외된다.</p>
+            </div>
+            <div class="crn-card">
+                <span class="crn-tag">INSERTION RULE</span>
+                <h3>핀과 키워드</h3>
+                <p>핀(항상)이 켜진 칸은 조건 없이 삽입된다. 핀이 꺼진 칸은 최근 대화에 키워드가 등장할 때만 삽입된다. 정규식 키워드를 지원한다.</p>
+            </div>
+            <div class="crn-card">
+                <span class="crn-tag">TOKEN BUDGET</span>
+                <h3>토큰 예산과 우선순위</h3>
+                <p>예산을 넘으면 점수가 낮은 칸부터 제외한다. 점수는 최신도, 고정 우선도, 핀 보너스, 키워드 적중 보너스의 합이다. 삽입 결과는 다시 연대순으로 정렬된다.</p>
+            </div>
+            <div class="crn-card">
+                <span class="crn-tag">SECRET · REPLACE</span>
+                <h3>비밀 칸과 대체 칸</h3>
+                <p>비밀 칸은 아는 인물을 함께 기록하며, 모르는 인물이 언급하지 않도록 안내문이 자동으로 붙는다. 대체 칸은 같은 이름의 이전 칸을 삽입에서 제외한다.</p>
+            </div>
+            <div class="crn-card">
+                <span class="crn-tag">AI BUILDER</span>
+                <h3>AI 연대기 생성</h3>
+                <p>자유 양식 텍스트, 또는 작품 이름만으로 연대기를 생성한다. 결과는 미리보기에서 확인한 뒤 등록한다. 기존 세계관에 합칠 때 같은 시점·같은 인물 칸은 덮어쓴다.</p>
+            </div>
+            <div class="crn-card">
+                <span class="crn-tag">SEPARATE API</span>
+                <h3>생성용 API 분리</h3>
+                <p>롤플레이 연결과 별개로 연결 프로필 또는 제공자를 지정한다. OpenAI, Claude, Gemini, Gemini Vertex AI, DeepSeek, GLM(Z.AI), OpenAI 호환 주소를 지원한다.</p>
+            </div>
+            <div class="crn-card">
+                <span class="crn-tag">KEYWORD LANGUAGE</span>
+                <h3>키워드 다국어</h3>
+                <p>AI 생성 시 키워드 언어를 한국어·영어·일본어·중국어 중에서 복수 선택한다. 예: <code>스네이프, Snape, スネイプ</code></p>
+            </div>
+            <div class="crn-card">
+                <span class="crn-tag">VIEW-ONLY TRANSLATION</span>
+                <h3>보기 전용 번역</h3>
+                <p>SillyTavern 기본 번역 기능으로 외국어 칸을 한국어로 표시한다. 칸 단위 또는 전체 단위로 켠다. 모델 API를 사용하지 않으며 프롬프트에는 원문이 들어간다.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===================== 04 ===================== -->
+    <section class="crn-sec">
+        <div class="crn-sec-head"><span class="crn-num">04</span><h2>사용 순서</h2></div>
+
+        <div class="crn-step">
+            <div>
+                <span class="crn-step-no">1</span>
+                <h3>세계관 준비</h3>
+                <p>확장 메뉴 → <strong>Chronicle</strong> → <strong>타임라인</strong> 탭.</p>
+                <ul class="crn-list">
+                    <li><strong>[새로]</strong>로 세계관을 만든다.</li>
+                    <li>기존 기록이 있으면 <strong>[불러오기]</strong>로 JSON 또는 텍스트 파일을 읽는다.</li>
+                    <li>기록이 없으면 <strong>[AI로 연대기 만들기]</strong>를 사용한다. (05항 참조)</li>
+                </ul>
+            </div>
+            <picture class="crn-shot is-narrow">
+                <source media="(max-width: 560px)" srcset="https://raw.githubusercontent.com/kkangtonglove/ST-Chronicle/main/docs/img/m_panel.webp">
+                <img src="https://raw.githubusercontent.com/kkangtonglove/ST-Chronicle/main/docs/img/pc_panel.webp" alt="Chronicle 설정 패널 타임라인 탭">
+            </picture>
+        </div>
+
+        <div class="crn-step">
+            <div>
+                <span class="crn-step-no">2</span>
+                <h3>기준 시점 지정</h3>
+                <p><strong>[타임라인 편집기]</strong>를 연다. 원하는 시점 왼쪽의 체크박스를 누른다.</p>
+                <ul class="crn-list">
+                    <li>누른 시점에 <strong>기준 시점</strong> 표시가 붙는다.</li>
+                    <li>같은 체크박스를 다시 누르면 해제된다.</li>
+                    <li>칸마다 있는 번역 버튼으로 외국어 칸을 한국어로 확인한다.</li>
+                    <li>입력 내용은 자동 저장된다. 저장 버튼은 없다.</li>
+                </ul>
+            </div>
+            <picture class="crn-shot">
+                <source media="(max-width: 560px)" srcset="https://raw.githubusercontent.com/kkangtonglove/ST-Chronicle/main/docs/img/m_editor.webp">
+                <img src="https://raw.githubusercontent.com/kkangtonglove/ST-Chronicle/main/docs/img/pc_editor.webp" alt="타임라인 편집기. 1995-06-24 시점과 칸별 번역 표시">
+            </picture>
+        </div>
+
+        <div class="crn-step">
+            <div>
+                <span class="crn-step-no">3</span>
+                <h3>채팅에 연결</h3>
+                <p>패널의 <strong>이 채팅 → 세계관</strong>에서 세계관을 고른다. 연결 정보는 채팅 파일마다 따로 저장된다.</p>
+                <ul class="crn-list">
+                    <li>같은 세계관으로 1991년 채팅과 1997년 채팅을 동시에 운용할 수 있다.</li>
+                    <li>상태 줄에 삽입 칸 수, 토큰 수, 차단·대체 칸 수가 표시된다.</li>
+                </ul>
+            </div>
+            <div class="crn-status">
+                <div class="crn-status-row"><span>이 채팅 · 세계관</span><b>해리포터 · 120시점</b></div>
+                <div class="crn-status-row"><span>기준 시점</span><b class="is-amber">1995-06-24</b></div>
+                <div class="crn-status-line">삽입 91 · 8987 토큰 &nbsp;|&nbsp; 미래 차단 47 &nbsp;|&nbsp; 대체됨 62</div>
+                <div class="crn-status-cap">상태 줄 표시 예</div>
+            </div>
+        </div>
+
+        <div class="crn-step">
+            <div>
+                <span class="crn-step-no">4</span>
+                <h3>삽입 결과 확인</h3>
+                <p><strong>[미리보기]</strong>로 실제로 모델에 전달되는 텍스트와 토큰 수를 확인한다.</p>
+                <ul class="crn-list">
+                    <li>예산 때문에 제외된 칸은 아래에 점수와 함께 표시된다.</li>
+                    <li><strong>[한국어로 보기]</strong>는 화면 표시만 번역한다.</li>
+                </ul>
+            </div>
+            <picture class="crn-shot">
+                <source media="(max-width: 560px)" srcset="https://raw.githubusercontent.com/kkangtonglove/ST-Chronicle/main/docs/img/m_preview.webp">
+                <img src="https://raw.githubusercontent.com/kkangtonglove/ST-Chronicle/main/docs/img/pc_preview.webp" alt="미리보기 창. 기준 시점 1995-06-24, 삽입 91개">
+            </picture>
+        </div>
+    </section>
+
+    <!-- ===================== 05 ===================== -->
+    <section class="crn-sec">
+        <div class="crn-sec-head"><span class="crn-num">05</span><h2>AI 연대기 생성</h2></div>
+
+        <div class="crn-step">
+            <div>
+                <h3>입력 방식</h3>
+                <div class="crn-table-wrap">
+                    <table>
+                        <tr><th>텍스트 정리</th><td>메모, 위키 사본, 설정집 등 양식이 자유로운 글을 붙여넣거나 파일로 연다. 긴 글은 나누어 요청한다.</td></tr>
+                        <tr><th>작품 이름만</th><td>작품 이름을 입력한다. 시대 목차를 먼저 만든 뒤 시대별로 상세 기록을 생성한다.</td></tr>
+                    </table>
+                </div>
+                <h3>실행 옵션</h3>
+                <ul class="crn-list">
+                    <li><strong>등록 위치</strong> — 새 세계관 / 지금 세계관에 합치기</li>
+                    <li><strong>내용 언어</strong> — 한국어 / English</li>
+                    <li><strong>자세함</strong> — 간략 / 보통 / 자세히</li>
+                    <li><strong>키워드 언어</strong> — 한국어 / English / 日本語 / 中文, 복수 선택</li>
+                    <li><strong>추가 요구</strong> — 서술 시점, 범위 등을 자유롭게 지정</li>
+                </ul>
+                <p>기본 지시문은 중립적인 사실 기록만 요구한다. 문체와 관점은 추가 요구로 지정한다.</p>
+            </div>
+            <picture class="crn-shot">
+                <source media="(max-width: 560px)" srcset="https://raw.githubusercontent.com/kkangtonglove/ST-Chronicle/main/docs/img/m_ai_form.webp">
+                <img src="https://raw.githubusercontent.com/kkangtonglove/ST-Chronicle/main/docs/img/pc_ai_form.webp" alt="AI로 연대기 만들기 창. 작품 이름 해리포터, 지금 세계관에 합치기">
+            </picture>
+        </div>
+
+        <div class="crn-step">
+            <div>
+                <h3>결과 확인 후 등록</h3>
+                <p>생성 결과는 바로 저장되지 않는다. 시점별 체크박스로 등록 대상을 고른 뒤 <strong>[등록하기]</strong>를 누른다.</p>
+                <div class="crn-table-wrap">
+                    <table>
+                        <tr><th>새 시점</th><td>세계관에 없던 날짜. 시점이 새로 생성된다.</td></tr>
+                        <tr><th>추가</th><td>기존 시점에 칸이 추가된다.</td></tr>
+                        <tr><th>덮어씀</th><td>같은 시점에 같은 이름의 인물·관계 칸이 있어 새 내용으로 교체된다.</td></tr>
+                    </table>
+                </div>
+            </div>
+            <picture class="crn-shot">
+                <source media="(max-width: 560px)" srcset="https://raw.githubusercontent.com/kkangtonglove/ST-Chronicle/main/docs/img/m_ai_result.webp">
+                <img src="https://raw.githubusercontent.com/kkangtonglove/ST-Chronicle/main/docs/img/pc_ai_result.webp" alt="AI 생성 결과 미리보기. 추가, 덮어씀, 새 시점 표시">
+            </picture>
+        </div>
+
+        <div class="crn-step">
+            <div>
+                <h3>연결 설정 (AI 탭)</h3>
+                <div class="crn-table-wrap">
+                    <table>
+                        <tr><th>지금 연결된 API</th><td>롤플레이와 같은 연결을 사용한다.</td></tr>
+                        <tr><th>연결 프로필 (권장)</th><td>SillyTavern 연결 프로필을 지정한다. 제공자·모델·키가 프로필 기준으로 적용된다.</td></tr>
+                        <tr><th>직접 고르기</th><td>제공자, 모델 이름, 저장된 키를 직접 지정한다.</td></tr>
+                    </table>
+                </div>
+                <p><strong>[연결 테스트]</strong>로 응답을 사전에 확인한다.</p>
+            </div>
+            <picture class="crn-shot is-narrow">
+                <img src="https://raw.githubusercontent.com/kkangtonglove/ST-Chronicle/main/docs/img/pc_aitab.webp" alt="AI 탭 연결 설정">
+            </picture>
+        </div>
+    </section>
+
+    <!-- ===================== 06 ===================== -->
+    <section class="crn-sec">
+        <div class="crn-sec-head"><span class="crn-num">06</span><h2>삽입 예시</h2></div>
+        <p>기준 시점 1995-06-24에서 모델에 전달되는 텍스트의 일부. 칸 이름은 항상 영어로 출력되고, 내용은 입력한 언어 그대로 출력된다.</p>
+<pre><span class="k">&lt;chronicle current_time="1995-06-24"&gt;</span>
+<span class="m">The following is the established chronicle of this world, up to the current point in time (1995-06-24), listed in chronological order.
+Treat every entry as canon. Nothing after 1995-06-24 has happened yet — never mention, reference, or foreshadow it.
+Entries marked SECRET are true, but hidden. …</span>
+
+<span class="k">[1991-09-01]</span>
+<span class="s">Story:</span> Harry Potter, Ron Weasley, Hermione Granger and Neville Longbottom are sorted into Gryffindor; Draco Malfoy into Slytherin.
+<span class="c">Character (Quirinus Quirrell)</span> <span class="x">[SECRET]</span><span class="c">:</span> The Defence Against the Dark Arts teacher shares his body with Voldemort's spirit.
+
+<span class="k">[1995-06-24]</span>
+<span class="s">Story:</span> Voldemort regains a body in a ritual using Harry's blood. Pettigrew kills Cedric Diggory.
+<span class="c">Character (Severus Snape)</span> <span class="x">[SECRET, known only to: Albus Dumbledore]</span><span class="c">:</span> Snape returns to the Dark Lord's side as a double agent.
+<span class="k">&lt;/chronicle&gt;</span></pre>
+    </section>
+
+    <!-- ===================== 07 ===================== -->
+    <section class="crn-sec">
+        <div class="crn-sec-head"><span class="crn-num">07</span><h2>사양</h2></div>
+        <div class="crn-table-wrap">
+            <table>
+                <tr><th>지원 환경</th><td>SillyTavern 1.14 이상 (1.19.0에서 검증), PC 및 모바일 브라우저</td></tr>
+                <tr><th>시점 형식</th><td><code>2015</code> · <code>2015-06</code> · <code>2015-06-30</code> · <code>-500</code>(기원전). 연·월 단위 시점은 그 기간 전체를 포함한다.</td></tr>
+                <tr><th>칸 옵션</th><td>항상(핀), 키워드, 고정 우선도(-100~100), 비밀(아는 인물), 대체, 사용 여부, 번역 보기</td></tr>
+                <tr><th>키워드 판정</th><td>영어: 단어 단위 · 한글 1~2자: 단어 첫머리 · 일본어·중국어 및 한글 3자 이상: 포함 여부 · <code>/정규식/</code></td></tr>
+                <tr><th>삽입 위치</th><td>프롬프트 맨 앞 / 캐릭터 정의 뒤 / 대화 속 지정 깊이. 역할: System · User · Assistant</td></tr>
+                <tr><th>기본 예산</th><td>1,500 토큰 (최신 가중치 60 · 핀 보너스 40 · 키워드 보너스 30 · 스캔 깊이 4)</td></tr>
+                <tr><th>생성용 API</th><td>OpenAI · Claude · Gemini (AI Studio) · Gemini Vertex AI (Express / 서비스 계정 JSON) · DeepSeek · GLM (Z.AI) · OpenAI 호환</td></tr>
+                <tr><th>파일 형식</th><td>JSON(백업용), 텍스트 <code>.txt</code>(메모장 편집용) 내보내기·불러오기</td></tr>
+                <tr><th>저장 위치</th><td>세계관: SillyTavern 설정(전역) · 채팅별 연결 정보: 각 채팅 파일</td></tr>
+                <tr><th>슬래시 명령</th><td><code>/chrono 1995</code> <code>/chrono off</code> <code>/chrono-world 이름</code> <code>/chrono-preview</code> <code>/chrono-ai</code></td></tr>
+            </table>
+        </div>
+    </section>
+
+    <!-- ===================== 08 ===================== -->
+    <section class="crn-sec">
+        <div class="crn-sec-head"><span class="crn-num">08</span><h2>설치</h2></div>
+        <ul class="crn-list">
+            <li>SillyTavern 확장 메뉴(블록 아이콘) → <strong>Install extension</strong>을 누른다.</li>
+            <li>아래 주소를 입력하고 설치한다.</li>
+            <li>확장 목록에 <strong>Chronicle</strong>이 표시되면 설치가 완료된 것이다.</li>
+        </ul>
+        <div class="crn-install">
+            <code>https://github.com/kkangtonglove/ST-Chronicle</code>
+        </div>
+        <p style="margin-top:12px;">업데이트는 확장 관리 화면의 업데이트 버튼으로 수행한다. 상세 설명은 저장소의 README를 참조한다.</p>
+    </section>
+
+    <!-- ===================== 09 ===================== -->
+    <section class="crn-sec">
+        <div class="crn-sec-head"><span class="crn-num">09</span><h2>주의 사항</h2></div>
+        <div class="crn-note" style="--c:var(--character)">
+            <span class="crn-note-t">SECURITY</span>
+            <p>Chronicle은 API 키를 보관하지 않는다. 키는 SillyTavern의 비밀 저장소에서만 관리된다. 내보낸 JSON·텍스트 파일에는 키와 연결 설정이 포함되지 않는다.</p>
+        </div>
+        <div class="crn-note">
+            <span class="crn-note-t">ACCURACY</span>
+            <p>"작품 이름만" 방식은 웹 검색이 아니라 모델이 학습한 지식으로 생성한다. 잘 알려지지 않은 작품은 사실과 다른 내용이 생성될 수 있다. 이 경우 자료를 직접 넣는 "텍스트 정리" 방식을 사용한다.</p>
+        </div>
+        <div class="crn-note" style="--c:var(--environment)">
+            <span class="crn-note-t">COST</span>
+            <p>AI 생성은 지정한 연결로 여러 번 요청한다. 유료 API는 요청 횟수만큼 요금이 발생한다. 자세함과 한 번에 보낼 글 길이로 요청 횟수를 조절한다.</p>
+        </div>
+        <div class="crn-note" style="--c:var(--story)">
+            <span class="crn-note-t">BUDGET</span>
+            <p>핀(항상) 칸의 합계가 토큰 예산을 넘으면 상태 줄과 미리보기에 경고가 표시된다. 예산을 늘리거나 일부 칸의 핀을 끈다.</p>
+        </div>
+    </section>
+
+    <footer class="crn-foot">
+        Chronicle · SillyTavern Extension · 예시 데이터는 해리포터 세계관을 요약한 팬 기록이다.
+    </footer>
+
+</article>
+
+</body>
+</html>

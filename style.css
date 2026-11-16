@@ -650,7 +650,7 @@
 
 .chr-block {
     display: grid;
-    grid-template-columns: 96px 1fr;
+    grid-template-columns: 136px 1fr;
     gap: 8px;
     padding: 8px 10px;
     border-top: 1px solid rgba(127, 127, 127, 0.12);
@@ -851,8 +851,7 @@
     font-size: 0.8em;
     line-height: 1.55;
     text-align: left;
-    max-height: 52vh;
-    overflow-y: auto;
+    /* no height cap: the popup itself scrolls, so the window is filled without a blank band */
     padding: 12px;
     border: 1px solid var(--SmartThemeBorderColor);
     border-radius: 8px;
@@ -1440,7 +1439,6 @@
 
     .chr-editor { min-height: 0; }
 
-    .chr-preview-body { max-height: none; }
 }
 
 @media (max-width: 600px) {
