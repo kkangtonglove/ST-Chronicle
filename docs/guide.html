@@ -533,8 +533,8 @@
     <!-- ===================== 01 ===================== -->
     <section class="crn-sec">
         <div class="crn-sec-head"><span class="crn-num">01</span><h2>개요</h2></div>
-        <p class="crn-lead">Chronicle은 세계관의 사건을 <strong>시점</strong> 단위로 기록하고, 채팅마다 지정한 <strong>기준 시점</strong>까지의 기록만 프롬프트에 삽입하는 SillyTavern 확장.</p>
-        <p>기준 시점 이후의 기록은 모델에 전달되지 않음. 아직 일어나지 않은 사건의 언급·암시 차단. 하나의 세계관으로 서로 다른 시점의 채팅 동시 운용 가능.</p>
+        <p class="crn-lead">Chronicle은 세계관의 사건을 <strong>시점</strong> 단위로 기록하고, 채팅마다 지정한 <strong>기준 시점</strong>까지의 기록만 프롬프트에 삽입하는 SillyTavern 확장</p>
+        <p>기준 시점 이후의 기록은 모델에 전달되지 않음<br>아직 일어나지 않은 사건의 언급·암시 차단<br>하나의 세계관으로 서로 다른 시점의 채팅 동시 운용 가능</p>
 
         <div class="crn-diagram" role="img" aria-label="기준 시점 차단 예시">
             <div class="crn-axis">
@@ -549,13 +549,13 @@
                 <span class="ng">■ 차단: 기준 시점 이후 전부</span>
             </div>
         </div>
-        <p style="font-size:14px;color:var(--dim);">예시: 기준 시점 1995-06-24(볼드모트 부활) 지정 시, 이후의 신비부 전투와 호그와트 전투는 모델에 전달되지 않음.</p>
+        <p style="font-size:14px;color:var(--dim);">예시: 기준 시점 1995-06-24(볼드모트 부활) 지정 시, 이후의 신비부 전투와 호그와트 전투는 모델에 전달되지 않음</p>
     </section>
 
     <!-- ===================== 02 ===================== -->
     <section class="crn-sec">
         <div class="crn-sec-head"><span class="crn-num">02</span><h2>기록 구조</h2></div>
-        <p>시점 하나에 네 종류의 칸을 개수 제한 없이 배치. 인물·관계 칸은 이름 필수.</p>
+        <p>시점 하나에 네 종류의 칸을 개수 제한 없이 배치<br>인물·관계 칸은 이름 필수</p>
         <div class="crn-types">
             <div class="crn-type" style="--c:var(--story)"><b>스토리</b><span>Story</span><p>그 시점에 일어난 사건</p></div>
             <div class="crn-type" style="--c:var(--character)"><b>인물</b><span>Character</span><p>한 인물의 상태·행동·변화</p></div>
@@ -563,13 +563,13 @@
             <div class="crn-type" style="--c:var(--environment)"><b>환경</b><span>Environment</span><p>제도·장소·정세·세계 규칙</p></div>
         </div>
         <pre><span class="k">[1995-06-24]</span>
-  <span class="s">스토리</span>   해리의 피를 사용한 의식으로 볼드모트의 육체 회복.
+  <span class="s">스토리</span>   해리의 피를 사용한 의식으로 볼드모트의 육체 회복
   <span class="c">인물</span>     세베루스 스네이프 → 이중 첩자 역할로 복귀   <span class="x">[비밀]</span> <span class="m">[대체]</span>
   <span class="r">관계</span>     해리 포터 &amp; 론 위즐리 → …
-  <span class="e">환경</span>     마법부, 볼드모트의 귀환 부정.
+  <span class="e">환경</span>     마법부, 볼드모트의 귀환 부정
 
 <span class="k">[1991-09~1998-05]</span>   <span class="m">← 기간형 시점</span>
-  <span class="e">환경</span>     해리 포터, 호그와트 재학 중.</pre>
+  <span class="e">환경</span>     해리 포터, 호그와트 재학 중</pre>
     </section>
 
     <!-- ===================== 03 ===================== -->
@@ -579,62 +579,62 @@
             <div class="crn-card">
                 <span class="crn-tag">TIME CUT-OFF</span>
                 <h3>기준 시점 차단</h3>
-                <p>편집기에서 시점의 체크박스를 누르면 해당 시점이 기준으로 지정됨. 처음부터 해당 시점까지 자동 체크, 이후 시점은 흐리게 표시되고 삽입에서 제외.</p>
+                <p>편집기에서 시점의 체크박스를 누르면 해당 시점이 기준으로 지정됨<br>처음부터 해당 시점까지 자동 체크, 이후 시점은 흐리게 표시되고 삽입에서 제외</p>
             </div>
             <div class="crn-card">
                 <span class="crn-tag">INSERTION RULE</span>
                 <h3>핀과 키워드</h3>
-                <p>핀(항상)이 켜진 칸은 조건 없이 삽입. 핀이 꺼진 칸은 최근 대화에 키워드가 등장할 때만 삽입. 정규식 키워드 지원.</p>
+                <p>핀(항상)이 켜진 칸은 조건 없이 삽입<br>핀이 꺼진 칸은 최근 대화에 키워드가 등장할 때만 삽입<br>정규식 키워드 지원</p>
             </div>
             <div class="crn-card">
                 <span class="crn-tag">TOKEN BUDGET</span>
                 <h3>토큰 예산과 우선순위</h3>
-                <p>예산 초과 시 점수가 낮은 칸부터 제외. 점수 = 최신도 + 고정 우선도 + 핀 보너스 + 키워드 적중 보너스. 삽입 결과는 연대순으로 재정렬.</p>
+                <p>예산 초과 시 점수가 낮은 칸부터 제외<br>점수 = 최신도 + 고정 우선도 + 핀 보너스 + 키워드 적중 보너스<br>삽입 결과는 연대순으로 재정렬</p>
             </div>
             <div class="crn-card">
                 <span class="crn-tag">SECRET · REPLACE</span>
                 <h3>비밀 칸과 대체 칸</h3>
-                <p>비밀 칸은 아는 인물을 함께 기록하고, 모르는 인물의 언급을 막는 안내문 자동 추가. 대체 칸은 그 인물의 현재 상태로 취급되며, 같은 이름의 이전 칸은 과거 기록(PAST)으로 표시되어 변화 과정 유지.</p>
+                <p>비밀 칸은 아는 인물을 함께 기록하고, 모르는 인물의 언급을 막는 안내문 자동 추가<br>대체 칸은 그 인물의 현재 상태로 취급되며, 같은 이름의 이전 칸은 과거 기록(PAST)으로 표시되어 변화 과정 유지</p>
             </div>
             <div class="crn-card">
                 <span class="crn-tag">POINT CONTROL</span>
                 <h3>시점 단위 설정</h3>
-                <p>시점 머리줄에서 칸 전체의 삽입 방식 일괄 지정. <b>칸별</b> / <b>전부 항상</b> / <b>전부 키워드</b> 중 선택, 시점 통째로 끄기 가능. 키워드 없이 삽입될 수 없는 칸이 있으면 <b>키워드 없음 N</b> 경고 표시.</p>
+                <p>시점 머리줄에서 칸 전체의 삽입 방식 일괄 지정 <b>칸별</b> / <b>전부 항상</b> / <b>전부 키워드</b> 중 선택, 시점 통째로 끄기 가능<br>키워드 없이 삽입될 수 없는 칸이 있으면 <b>키워드 없음 N</b> 경고 표시</p>
             </div>
             <div class="crn-card">
                 <span class="crn-tag">TOKEN SAVING</span>
                 <h3>오래된 칸 줄여 넣기</h3>
-                <p>선택 옵션, 세계관별 지정 가능. 최근 N개 시점(기본 12)만 전문 삽입, 그 이전 칸은 첫 문장만 삽입. 해리포터 예시(기준 1995-06-24)에서 10,327 → 6,992 토큰, 약 32% 절감.</p>
+                <p>선택 옵션, 세계관별 지정 가능<br>최근 N개 시점(기본 12)만 전문 삽입, 그 이전 칸은 첫 문장만 삽입<br>해리포터 예시(기준 1995-06-24)에서 10,327 → 6,992 토큰, 약 32% 절감</p>
             </div>
             <div class="crn-card">
                 <span class="crn-tag">PERIOD</span>
                 <h3>기간형 시점</h3>
-                <p>날짜를 <code>1970~1981</code> 형식으로 입력 시 그 기간 동안 이어지는 상태로 취급. 기준 시점이 기간 안이면 <code>ongoing</code>, 지나면 <code>ended</code>로 표시되어 삽입. 끝나지 않은 상태는 <code>1991~</code>로 입력.</p>
+                <p>날짜를 <code>1970~1981</code> 형식으로 입력 시 그 기간 동안 이어지는 상태로 취급<br>기준 시점이 기간 안이면 <code>ongoing</code>, 지나면 <code>ended</code>로 표시되어 삽입<br>끝나지 않은 상태는 <code>1991~</code>로 입력</p>
             </div>
             <div class="crn-card">
                 <span class="crn-tag">CAST</span>
                 <h3>등장 인물 반영</h3>
-                <p>캐릭터 카드, 그룹 멤버, 페르소나 이름, 최근 대화에 나온 인물을 등장 인물로 판정. 해당 인물·관계 칸의 점수 가산 또는 등장 인물의 칸만 삽입.</p>
+                <p>캐릭터 카드, 그룹 멤버, 페르소나 이름, 최근 대화에 나온 인물을 등장 인물로 판정<br>해당 인물·관계 칸의 점수 가산 또는 등장 인물의 칸만 삽입</p>
             </div>
             <div class="crn-card">
                 <span class="crn-tag">AI BUILDER</span>
                 <h3>AI 연대기 생성</h3>
-                <p>자유 양식 텍스트 또는 작품 이름만으로 연대기 생성. 결과는 미리보기 확인 후 등록. 기존 세계관에 합칠 때 같은 시점·같은 인물 칸은 덮어씀.</p>
+                <p>자유 양식 텍스트 또는 작품 이름만으로 연대기 생성<br>결과는 미리보기 확인 후 등록<br>기존 세계관에 합칠 때 같은 시점·같은 인물 칸은 덮어씀</p>
             </div>
             <div class="crn-card">
                 <span class="crn-tag">SEPARATE API</span>
                 <h3>생성용 API 분리</h3>
-                <p>롤플레이 연결과 별개로 연결 프로필 또는 제공자 지정. OpenAI, Claude, Gemini, Gemini Vertex AI, DeepSeek, GLM(Z.AI), OpenAI 호환 주소 지원.</p>
+                <p>롤플레이 연결과 별개로 연결 프로필 또는 제공자 지정<br>OpenAI, Claude, Gemini, Gemini Vertex AI, DeepSeek, GLM(Z.AI), OpenAI 호환 주소 지원</p>
             </div>
             <div class="crn-card">
                 <span class="crn-tag">KEYWORD LANGUAGE</span>
                 <h3>키워드 다국어</h3>
-                <p>AI 생성 시 키워드 언어를 한국어·영어·일본어·중국어 중에서 복수 선택. 예: <code>스네이프, Snape, スネイプ</code></p>
+                <p>AI 생성 시 키워드 언어를 한국어·영어·일본어·중국어 중에서 복수 선택<br>예: <code>스네이프, Snape, スネイプ</code></p>
             </div>
             <div class="crn-card">
                 <span class="crn-tag">VIEW-ONLY TRANSLATION</span>
                 <h3>보기 전용 번역</h3>
-                <p>SillyTavern 기본 번역 기능으로 외국어 칸을 한국어로 표시. 칸 단위 또는 전체 단위로 사용. 모델 API 미사용, 프롬프트에는 원문 삽입.</p>
+                <p>SillyTavern 기본 번역 기능으로 외국어 칸을 한국어로 표시<br>칸 단위 또는 전체 단위로 사용<br>모델 API 미사용, 프롬프트에는 원문 삽입</p>
             </div>
         </div>
     </section>
@@ -647,11 +647,11 @@
             <div>
                 <span class="crn-step-no">1</span>
                 <h3>세계관 준비</h3>
-                <p>확장 메뉴 → <strong>Chronicle</strong> → <strong>타임라인</strong> 탭.</p>
+                <p>확장 메뉴 → <strong>Chronicle</strong> → <strong>타임라인</strong> 탭</p>
                 <ul class="crn-list">
-                    <li><strong>[새로]</strong>로 세계관 생성.</li>
-                    <li>기존 기록이 있으면 <strong>[불러오기]</strong>로 JSON 또는 텍스트 파일 불러오기.</li>
-                    <li>기록이 없으면 <strong>[AI로 연대기 만들기]</strong> 사용. (05항 참조)</li>
+                    <li><strong>[새로]</strong>로 세계관 생성</li>
+                    <li>기존 기록이 있으면 <strong>[불러오기]</strong>로 JSON 또는 텍스트 파일 불러오기</li>
+                    <li>기록이 없으면 <strong>[AI로 연대기 만들기]</strong> 사용<br>(05항 참조)</li>
                 </ul>
             </div>
             <picture class="crn-shot is-narrow">
@@ -664,15 +664,15 @@
             <div>
                 <span class="crn-step-no">2</span>
                 <h3>기준 시점 지정</h3>
-                <p><strong>[타임라인 편집기]</strong> 열기. 원하는 시점 왼쪽의 체크박스 선택.</p>
+                <p><strong>[타임라인 편집기]</strong> 열기<br>원하는 시점 왼쪽의 체크박스 선택</p>
                 <ul class="crn-list">
-                    <li>누른 시점에 <strong>기준 시점</strong> 표시 추가.</li>
-                    <li>같은 체크박스를 다시 누르면 해제.</li>
-                    <li>칸마다 있는 번역 버튼으로 외국어 칸의 한국어 확인 가능.</li>
-                    <li>시점 머리줄의 <strong>칸별 / 전부 항상 / 전부 키워드</strong> 버튼으로 시점 전체의 삽입 방식 일괄 변경. 눈 아이콘으로 시점 통째로 끄기.</li>
-                    <li><strong>키워드 없음 N</strong> 표시는 삽입될 수 없는 칸이 있다는 경고. 키워드 입력 또는 핀 설정 권장.</li>
-                    <li>입력 내용 자동 저장. 저장 버튼 없음.</li>
-                    <li>지운 시점과 칸은 <strong>[되돌리기]</strong>로 복구. 새로고침 전까지 최대 30개 유지.</li>
+                    <li>누른 시점에 <strong>기준 시점</strong> 표시 추가</li>
+                    <li>같은 체크박스를 다시 누르면 해제</li>
+                    <li>칸마다 있는 번역 버튼으로 외국어 칸의 한국어 확인 가능</li>
+                    <li>시점 머리줄의 <strong>칸별 / 전부 항상 / 전부 키워드</strong> 버튼으로 시점 전체의 삽입 방식 일괄 변경<br>눈 아이콘으로 시점 통째로 끄기</li>
+                    <li><strong>키워드 없음 N</strong> 표시는 삽입될 수 없는 칸이 있다는 경고<br>키워드 입력 또는 핀 설정 권장</li>
+                    <li>입력 내용 자동 저장<br>저장 버튼 없음</li>
+                    <li>지운 시점과 칸은 <strong>[되돌리기]</strong>로 복구<br>새로고침 전까지 최대 30개 유지</li>
                 </ul>
             </div>
             <picture class="crn-shot">
@@ -685,10 +685,10 @@
             <div>
                 <span class="crn-step-no">3</span>
                 <h3>채팅에 연결</h3>
-                <p>패널의 <strong>이 채팅 → 세계관</strong>에서 세계관 선택. 연결 정보는 채팅 파일마다 별도 저장.</p>
+                <p>패널의 <strong>이 채팅 → 세계관</strong>에서 세계관 선택<br>연결 정보는 채팅 파일마다 별도 저장</p>
                 <ul class="crn-list">
-                    <li>같은 세계관으로 1991년 채팅과 1997년 채팅 동시 운용 가능.</li>
-                    <li>상태 줄에 삽입 칸 수, 토큰 수, 미래 차단 칸 수, 과거 기록 칸 수 표시.</li>
+                    <li>같은 세계관으로 1991년 채팅과 1997년 채팅 동시 운용 가능</li>
+                    <li>상태 줄에 삽입 칸 수, 토큰 수, 미래 차단 칸 수, 과거 기록 칸 수 표시</li>
                 </ul>
             </div>
             <div class="crn-status">
@@ -703,11 +703,11 @@
             <div>
                 <span class="crn-step-no">4</span>
                 <h3>삽입 결과 확인</h3>
-                <p><strong>[미리보기]</strong>로 실제 모델 전달 텍스트와 토큰 수 확인.</p>
+                <p><strong>[미리보기]</strong>로 실제 모델 전달 텍스트와 토큰 수 확인</p>
                 <ul class="crn-list">
-                    <li>예산 때문에 제외된 칸은 하단에 점수와 함께 표시.</li>
-                    <li>대체된 칸은 대체한 칸의 날짜와 함께 목록으로 표시.</li>
-                    <li><strong>[한국어로 보기]</strong>는 화면 표시만 번역.</li>
+                    <li>예산 때문에 제외된 칸은 하단에 점수와 함께 표시</li>
+                    <li>대체된 칸은 대체한 칸의 날짜와 함께 목록으로 표시</li>
+                    <li><strong>[한국어로 보기]</strong>는 화면 표시만 번역</li>
                 </ul>
             </div>
             <picture class="crn-shot">
@@ -726,8 +726,8 @@
                 <h3>입력 방식</h3>
                 <div class="crn-table-wrap">
                     <table>
-                        <tr><th>텍스트 정리</th><td>메모, 위키 사본, 설정집 등 양식이 자유로운 글을 붙여넣기 또는 파일로 열기. 긴 글은 분할 요청.</td></tr>
-                        <tr><th>작품 이름만</th><td>작품 이름 입력. 시대 목차 생성 후 시대별 상세 기록 생성.</td></tr>
+                        <tr><th>텍스트 정리</th><td>메모, 위키 사본, 설정집 등 양식이 자유로운 글을 붙여넣기 또는 파일로 열기<br>긴 글은 분할 요청</td></tr>
+                        <tr><th>작품 이름만</th><td>작품 이름 입력<br>시대 목차 생성 후 시대별 상세 기록 생성</td></tr>
                     </table>
                 </div>
                 <h3>실행 옵션</h3>
@@ -738,7 +738,7 @@
                     <li><strong>키워드 언어</strong> — 한국어 / English / 日本語 / 中文, 복수 선택</li>
                     <li><strong>추가 요구</strong> — 서술 시점, 범위 등을 자유롭게 지정</li>
                 </ul>
-                <p>기본 지시문은 중립적인 사실 기록만 요구. 문체와 관점은 추가 요구로 지정 권장.</p>
+                <p>기본 지시문은 중립적인 사실 기록만 요구<br>문체와 관점은 추가 요구로 지정 권장</p>
             </div>
             <picture class="crn-shot">
                 <source media="(max-width: 560px)" srcset="https://raw.githubusercontent.com/kkangtonglove/ST-Chronicle/main/docs/img/m_ai_form.webp">
@@ -749,12 +749,12 @@
         <div class="crn-step">
             <div>
                 <h3>결과 확인 후 등록</h3>
-                <p>생성 결과는 즉시 저장되지 않음. 시점별 체크박스로 등록 대상 선택 후 <strong>[등록하기]</strong> 선택.</p>
+                <p>생성 결과는 즉시 저장되지 않음<br>시점별 체크박스로 등록 대상 선택 후 <strong>[등록하기]</strong> 선택</p>
                 <div class="crn-table-wrap">
                     <table>
-                        <tr><th>새 시점</th><td>세계관에 없던 날짜. 시점 신규 생성.</td></tr>
-                        <tr><th>추가</th><td>기존 시점에 칸 추가.</td></tr>
-                        <tr><th>덮어씀</th><td>같은 시점에 같은 이름의 인물·관계 칸이 있어 새 내용으로 교체.</td></tr>
+                        <tr><th>새 시점</th><td>세계관에 없던 날짜<br>시점 신규 생성</td></tr>
+                        <tr><th>추가</th><td>기존 시점에 칸 추가</td></tr>
+                        <tr><th>덮어씀</th><td>같은 시점에 같은 이름의 인물·관계 칸이 있어 새 내용으로 교체</td></tr>
                     </table>
                 </div>
             </div>
@@ -769,12 +769,12 @@
                 <h3>연결 설정 (AI 탭)</h3>
                 <div class="crn-table-wrap">
                     <table>
-                        <tr><th>지금 연결된 API</th><td>롤플레이와 같은 연결 사용.</td></tr>
-                        <tr><th>연결 프로필 (권장)</th><td>SillyTavern 연결 프로필 지정. 제공자·모델·키가 프로필 기준으로 적용.</td></tr>
-                        <tr><th>직접 고르기</th><td>제공자, 모델 이름, 저장된 키 직접 지정.</td></tr>
+                        <tr><th>지금 연결된 API</th><td>롤플레이와 같은 연결 사용</td></tr>
+                        <tr><th>연결 프로필 (권장)</th><td>SillyTavern 연결 프로필 지정<br>제공자·모델·키가 프로필 기준으로 적용</td></tr>
+                        <tr><th>직접 고르기</th><td>제공자, 모델 이름, 저장된 키 직접 지정</td></tr>
                     </table>
                 </div>
-                <p><strong>[연결 테스트]</strong>로 응답 사전 확인 권장.</p>
+                <p><strong>[연결 테스트]</strong>로 응답 사전 확인 권장</p>
             </div>
             <picture class="crn-shot is-narrow">
                 <img src="https://raw.githubusercontent.com/kkangtonglove/ST-Chronicle/main/docs/img/pc_aitab.webp" alt="AI 탭 연결 설정">
@@ -785,7 +785,7 @@
     <!-- ===================== 06 ===================== -->
     <section class="crn-sec">
         <div class="crn-sec-head"><span class="crn-num">06</span><h2>삽입 예시</h2></div>
-        <p>기준 시점 1995-06-24에서 모델에 전달되는 텍스트의 일부. 칸 이름은 항상 영어, 내용은 입력한 언어 그대로 출력.</p>
+        <p>기준 시점 1995-06-24에서 모델에 전달되는 텍스트의 일부<br>칸 이름은 항상 영어, 내용은 입력한 언어 그대로 출력</p>
 <pre><span class="k">&lt;chronicle current_time="1995-06-24"&gt;</span>
 <span class="m">The following is the established chronicle of this world, up to the current point in time (1995-06-24), listed in chronological order.
 Treat every entry as canon. Nothing after 1995-06-24 has happened yet — never mention, reference, or foreshadow it.
@@ -814,16 +814,16 @@ Entries marked PAST describe an earlier state of that character or relationship.
         <div class="crn-table-wrap">
             <table>
                 <tr><th>지원 환경</th><td>SillyTavern 1.14 이상 (1.19.0에서 검증), PC 및 모바일 브라우저</td></tr>
-                <tr><th>시점 형식</th><td><code>2015</code> · <code>2015-06</code> · <code>2015-06-30</code> · <code>-500</code>(기원전). 연·월 단위 시점은 그 기간 전체 포함.</td></tr>
-                <tr><th>기간 형식</th><td><code>1970~1981</code> · <code>1991-09~1998-05</code> · <code>1991~</code>(진행 중). 기준 시점에 따라 ongoing / ended 표시.</td></tr>
+                <tr><th>시점 형식</th><td><code>2015</code> · <code>2015-06</code> · <code>2015-06-30</code> · <code>-500</code>(기원전)<br>연·월 단위 시점은 그 기간 전체 포함</td></tr>
+                <tr><th>기간 형식</th><td><code>1970~1981</code> · <code>1991-09~1998-05</code> · <code>1991~</code>(진행 중)<br>기준 시점에 따라 ongoing / ended 표시</td></tr>
                 <tr><th>칸 옵션</th><td>항상(핀), 키워드, 고정 우선도(-100~100), 비밀(아는 인물), 대체, 사용 여부, 번역 보기</td></tr>
                 <tr><th>대체된 이전 칸</th><td>과거 기록으로 표시해서 삽입(기본) / 삽입하지 않음 — 설정 탭에서 선택</td></tr>
                 <tr><th>등장 인물 반영</th><td>끄기 / 등장 인물 우선(기본, +40점) / 등장 인물만 넣기 — 스토리·환경 칸은 영향 없음</td></tr>
                 <tr><th>되돌리기</th><td>삭제한 시점·칸 최대 30개, 새로고침 전까지</td></tr>
-                <tr><th>시점 단위 설정</th><td>칸별(기본) / 전부 항상 / 전부 키워드, 시점 켜기·끄기. 시점 설정이 칸별 핀보다 우선</td></tr>
-                <tr><th>오래된 칸 줄여 넣기</th><td>기본값: 설정 탭(끄기, 전문 유지 12개 시점). 세계관별 설정: 타임라인 탭의 세계관 아래에서 기본값 따름 / 켜기 / 끄기, 전문 유지 시점 수 개별 지정. 진행 중인 기간은 최근으로 취급</td></tr>
+                <tr><th>시점 단위 설정</th><td>칸별(기본) / 전부 항상 / 전부 키워드, 시점 켜기·끄기<br>시점 설정이 칸별 핀보다 우선</td></tr>
+                <tr><th>오래된 칸 줄여 넣기</th><td>기본값: 설정 탭(끄기, 전문 유지 12개 시점)<br>세계관별 설정: 타임라인 탭의 세계관 아래에서 기본값 따름 / 켜기 / 끄기, 전문 유지 시점 수 개별 지정<br>진행 중인 기간은 최근으로 취급</td></tr>
                 <tr><th>키워드 판정</th><td>영어: 단어 단위 · 한글 1~2자: 단어 첫머리 · 일본어·중국어 및 한글 3자 이상: 포함 여부 · <code>/정규식/</code></td></tr>
-                <tr><th>삽입 위치</th><td>프롬프트 맨 앞 / 캐릭터 정의 뒤 / 대화 속 지정 깊이. 역할: System · User · Assistant</td></tr>
+                <tr><th>삽입 위치</th><td>프롬프트 맨 앞 / 캐릭터 정의 뒤 / 대화 속 지정 깊이<br>역할: System · User · Assistant</td></tr>
                 <tr><th>기본 예산</th><td>1,500 토큰 (최신 가중치 60 · 핀 보너스 40 · 키워드 보너스 30 · 스캔 깊이 4)</td></tr>
                 <tr><th>생성용 API</th><td>OpenAI · Claude · Gemini (AI Studio) · Gemini Vertex AI (Express / 서비스 계정 JSON) · DeepSeek · GLM (Z.AI) · OpenAI 호환</td></tr>
                 <tr><th>파일 형식</th><td>JSON(백업용), 텍스트 <code>.txt</code>(메모장 편집용) 내보내기·불러오기</td></tr>
@@ -837,14 +837,14 @@ Entries marked PAST describe an earlier state of that character or relationship.
     <section class="crn-sec">
         <div class="crn-sec-head"><span class="crn-num">08</span><h2>설치</h2></div>
         <ul class="crn-list">
-            <li>SillyTavern 확장 메뉴(블록 아이콘) → <strong>Install extension</strong> 선택.</li>
-            <li>아래 주소 입력 후 설치.</li>
-            <li>확장 목록에 <strong>Chronicle</strong> 표시 시 설치 완료.</li>
+            <li>SillyTavern 확장 메뉴(블록 아이콘) → <strong>Install extension</strong> 선택</li>
+            <li>아래 주소 입력 후 설치</li>
+            <li>확장 목록에 <strong>Chronicle</strong> 표시 시 설치 완료</li>
         </ul>
         <div class="crn-install">
             <code>https://github.com/kkangtonglove/ST-Chronicle</code>
         </div>
-        <p style="margin-top:12px;">업데이트는 확장 관리 화면의 업데이트 버튼 사용.</p>
+        <p style="margin-top:12px;">업데이트는 확장 관리 화면의 업데이트 버튼 사용</p>
     </section>
 
     <!-- ===================== 09 ===================== -->
@@ -852,24 +852,24 @@ Entries marked PAST describe an earlier state of that character or relationship.
         <div class="crn-sec-head"><span class="crn-num">09</span><h2>주의 사항</h2></div>
         <div class="crn-note" style="--c:var(--character)">
             <span class="crn-note-t">SECURITY</span>
-            <p>Chronicle은 API 키를 보관하지 않음. 키는 SillyTavern 비밀 저장소에서만 관리. 내보낸 JSON·텍스트 파일에 키와 연결 설정 미포함.</p>
+            <p>Chronicle은 API 키를 보관하지 않음<br>키는 SillyTavern 비밀 저장소에서만 관리<br>내보낸 JSON·텍스트 파일에 키와 연결 설정 미포함</p>
         </div>
         <div class="crn-note">
             <span class="crn-note-t">ACCURACY</span>
-            <p>"작품 이름만" 방식은 웹 검색이 아닌 모델의 학습 지식으로 생성. 잘 알려지지 않은 작품은 사실과 다른 내용 생성 가능성 있음. 이 경우 자료를 직접 넣는 "텍스트 정리" 방식 권장.</p>
+            <p>"작품 이름만" 방식은 웹 검색이 아닌 모델의 학습 지식으로 생성<br>잘 알려지지 않은 작품은 사실과 다른 내용 생성 가능성 있음<br>이 경우 자료를 직접 넣는 "텍스트 정리" 방식 권장</p>
         </div>
         <div class="crn-note" style="--c:var(--environment)">
             <span class="crn-note-t">COST</span>
-            <p>AI 생성은 지정한 연결로 여러 번 요청. 유료 API는 요청 횟수만큼 요금 발생. 자세함과 한 번에 보낼 글 길이로 요청 횟수 조절 권장.</p>
+            <p>AI 생성은 지정한 연결로 여러 번 요청<br>유료 API는 요청 횟수만큼 요금 발생<br>자세함과 한 번에 보낼 글 길이로 요청 횟수 조절 권장</p>
         </div>
         <div class="crn-note" style="--c:var(--story)">
             <span class="crn-note-t">BUDGET</span>
-            <p>핀(항상) 칸의 합계가 토큰 예산 초과 시 상태 줄과 미리보기에 경고 표시. 예산 증액, 일부 칸의 핀 해제, 또는 <b>오래된 칸 줄여 넣기</b> 사용 권장. 과거 기록 방식은 이전 칸까지 삽입하므로 토큰 사용량 증가.</p>
+            <p>핀(항상) 칸의 합계가 토큰 예산 초과 시 상태 줄과 미리보기에 경고 표시<br>예산 증액, 일부 칸의 핀 해제, 또는 <b>오래된 칸 줄여 넣기</b> 사용 권장<br>과거 기록 방식은 이전 칸까지 삽입하므로 토큰 사용량 증가</p>
         </div>
     </section>
 
     <footer class="crn-foot">
-        Chronicle · SillyTavern Extension · 예시 데이터: 해리포터 세계관 요약 팬 기록.
+        Chronicle · SillyTavern Extension · 예시 데이터: 해리포터 세계관 요약 팬 기록
     </footer>
 
 </article>
