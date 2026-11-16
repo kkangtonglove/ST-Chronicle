@@ -371,30 +371,34 @@
 
 .crn-status-cap { margin-top: 8px; font-size: 12px; color: var(--dim); }
 
-/* ---------- table ---------- */
+/* ---------- key / value list (div-based so board table styles can't touch it) ---------- */
 
-.crn-table-wrap { overflow-x: auto; margin: 6px 0 16px; border: 1px solid var(--line); border-radius: 10px; }
-
-.crn table { width: 100%; border-collapse: collapse; font-size: 14.5px; }
-
-.crn th, .crn td {
-    padding: 11px 14px;
+.crn-kv {
+    margin: 6px 0 16px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    overflow: hidden;
+    font-size: 14.5px;
     text-align: left;
-    vertical-align: top;
+}
+
+.crn-kv-row {
+    display: grid;
+    grid-template-columns: minmax(120px, 28%) minmax(0, 1fr);
     border-bottom: 1px solid var(--line);
 }
 
-.crn tr:last-child th, .crn tr:last-child td { border-bottom: none; }
+.crn-kv-row:last-child { border-bottom: none; }
 
-.crn th {
-    width: 28%;
-    font-weight: 600;
-    color: var(--text);
-    background: var(--panel-2);
-    white-space: nowrap;
+.crn-kv-k, .crn-kv-v {
+    min-width: 0;
+    padding: 11px 14px;
+    text-align: left;
+    white-space: normal;
 }
 
-.crn td { color: var(--sub); background: var(--panel); }
+.crn-kv-k { font-weight: 600; color: var(--text); background: var(--panel-2); }
+.crn-kv-v { color: var(--sub); background: var(--panel); }
 
 /* ---------- code ---------- */
 
@@ -481,9 +485,9 @@
     .crn-axis div { padding: 12px 2px 10px; font-size: 11px; }
     .crn-axis small { font-size: 10px; }
     .crn-shot.is-narrow { max-width: 100%; }
-    .crn th { width: auto; white-space: normal; }
-    .crn th, .crn td { display: block; width: 100%; }
-    .crn th { border-bottom: none; padding-bottom: 2px; }
+    .crn-kv-row { grid-template-columns: minmax(0, 1fr); }
+    .crn-kv-k { padding-bottom: 6px; }
+    .crn-kv-v { padding-top: 6px; }
     .crn pre { font-size: 12px; padding: 14px; }
     .crn-note { grid-template-columns: 1fr; gap: 4px; }
     .crn-foot { padding: 20px 18px 0; }
@@ -704,11 +708,9 @@
         <div class="crn-step">
             <div>
                 <h3>입력 방식</h3>
-                <div class="crn-table-wrap">
-                    <table>
-                        <tr><th>텍스트 정리</th><td>메모, 위키 사본, 설정집 등 양식이 자유로운 글을 붙여넣기 또는 파일로 열기<br>긴 글은 분할 요청</td></tr>
-                        <tr><th>작품 이름만</th><td>작품 이름 입력<br>시대 목차 생성 후 시대별 상세 기록 생성</td></tr>
-                    </table>
+                <div class="crn-kv">
+                    <div class="crn-kv-row"><div class="crn-kv-k">텍스트 정리</div><div class="crn-kv-v">메모, 위키 사본, 설정집 등 양식이 자유로운 글을 붙여넣기 또는 파일로 열기<br>긴 글은 분할 요청</div></div>
+                    <div class="crn-kv-row"><div class="crn-kv-k">작품 이름만</div><div class="crn-kv-v">작품 이름 입력<br>시대 목차 생성 후 시대별 상세 기록 생성</div></div>
                 </div>
                 <h3>실행 옵션</h3>
                 <ul class="crn-list">
@@ -730,12 +732,10 @@
             <div>
                 <h3>결과 확인 후 등록</h3>
                 <p>생성 결과는 즉시 저장되지 않음<br>시점별 체크박스로 등록 대상 선택 후 <strong>[등록하기]</strong> 선택</p>
-                <div class="crn-table-wrap">
-                    <table>
-                        <tr><th>새 시점</th><td>세계관에 없던 날짜<br>시점 신규 생성</td></tr>
-                        <tr><th>추가</th><td>기존 시점에 칸 추가</td></tr>
-                        <tr><th>덮어씀</th><td>같은 시점에 같은 이름의 인물·관계 칸이 있어 새 내용으로 교체</td></tr>
-                    </table>
+                <div class="crn-kv">
+                    <div class="crn-kv-row"><div class="crn-kv-k">새 시점</div><div class="crn-kv-v">세계관에 없던 날짜<br>시점 신규 생성</div></div>
+                    <div class="crn-kv-row"><div class="crn-kv-k">추가</div><div class="crn-kv-v">기존 시점에 칸 추가</div></div>
+                    <div class="crn-kv-row"><div class="crn-kv-k">덮어씀</div><div class="crn-kv-v">같은 시점에 같은 이름의 인물·관계 칸이 있어 새 내용으로 교체</div></div>
                 </div>
             </div>
             <picture class="crn-shot">
@@ -747,12 +747,10 @@
         <div class="crn-step">
             <div>
                 <h3>연결 설정 (AI 탭)</h3>
-                <div class="crn-table-wrap">
-                    <table>
-                        <tr><th>지금 연결된 API</th><td>롤플레이와 같은 연결 사용</td></tr>
-                        <tr><th>연결 프로필 (권장)</th><td>SillyTavern 연결 프로필 지정<br>제공자·모델·키가 프로필 기준으로 적용</td></tr>
-                        <tr><th>직접 고르기</th><td>제공자, 모델 이름, 저장된 키 직접 지정</td></tr>
-                    </table>
+                <div class="crn-kv">
+                    <div class="crn-kv-row"><div class="crn-kv-k">지금 연결된 API</div><div class="crn-kv-v">롤플레이와 같은 연결 사용</div></div>
+                    <div class="crn-kv-row"><div class="crn-kv-k">연결 프로필 (권장)</div><div class="crn-kv-v">SillyTavern 연결 프로필 지정<br>제공자·모델·키가 프로필 기준으로 적용</div></div>
+                    <div class="crn-kv-row"><div class="crn-kv-k">직접 고르기</div><div class="crn-kv-v">제공자, 모델 이름, 저장된 키 직접 지정</div></div>
                 </div>
                 <p><strong>[연결 테스트]</strong>로 응답 사전 확인 권장</p>
             </div>
@@ -791,25 +789,23 @@ Entries marked PAST describe an earlier state of that character or relationship.
     <!-- ===================== 07 ===================== -->
     <section class="crn-sec">
         <div class="crn-sec-head"><span class="crn-num">07</span><h2>사양</h2></div>
-        <div class="crn-table-wrap">
-            <table>
-                <tr><th>지원 환경</th><td>SillyTavern 1.14 이상 (1.19.0에서 검증), PC 및 모바일 브라우저</td></tr>
-                <tr><th>시점 형식</th><td><code>2015</code> · <code>2015-06</code> · <code>2015-06-30</code> · <code>-500</code>(기원전)<br>연·월 단위 시점은 그 기간 전체 포함</td></tr>
-                <tr><th>기간 형식</th><td><code>1970~1981</code> · <code>1991-09~1998-05</code> · <code>1991~</code>(진행 중)<br>기준 시점에 따라 ongoing / ended 표시</td></tr>
-                <tr><th>칸 옵션</th><td>항상(핀), 키워드, 고정 우선도(-100~100), 비밀(아는 인물), 대체, 사용 여부, 번역 보기</td></tr>
-                <tr><th>대체된 이전 칸</th><td>과거 기록으로 표시해서 삽입(기본) / 삽입하지 않음 — 설정 탭에서 선택</td></tr>
-                <tr><th>등장 인물 반영</th><td>끄기 / 등장 인물 우선(기본, +40점) / 등장 인물만 넣기 — 스토리·환경 칸은 영향 없음</td></tr>
-                <tr><th>되돌리기</th><td>삭제한 시점·칸 최대 30개, 새로고침 전까지</td></tr>
-                <tr><th>시점 단위 설정</th><td>칸별(기본) / 전부 항상 / 전부 키워드, 시점 켜기·끄기<br>시점 설정이 칸별 핀보다 우선</td></tr>
-                <tr><th>오래된 칸 줄여 넣기</th><td>기본값: 설정 탭(끄기, 전문 유지 12개 시점)<br>세계관별 설정: 타임라인 탭의 세계관 아래에서 기본값 따름 / 켜기 / 끄기, 전문 유지 시점 수 개별 지정<br>진행 중인 기간은 최근으로 취급</td></tr>
-                <tr><th>키워드 판정</th><td>영어: 단어 단위 · 한글 1~2자: 단어 첫머리 · 일본어·중국어 및 한글 3자 이상: 포함 여부 · <code>/정규식/</code></td></tr>
-                <tr><th>삽입 위치</th><td>프롬프트 맨 앞 / 캐릭터 정의 뒤 / 대화 속 지정 깊이<br>역할: System · User · Assistant</td></tr>
-                <tr><th>기본 예산</th><td>1,500 토큰 (최신 가중치 60 · 핀 보너스 40 · 키워드 보너스 30 · 스캔 깊이 4)</td></tr>
-                <tr><th>생성용 API</th><td>OpenAI · Claude · Gemini (AI Studio) · Gemini Vertex AI (Express / 서비스 계정 JSON) · DeepSeek · GLM (Z.AI) · OpenAI 호환</td></tr>
-                <tr><th>파일 형식</th><td>JSON(백업용), 텍스트 <code>.txt</code>(메모장 편집용) 내보내기·불러오기</td></tr>
-                <tr><th>저장 위치</th><td>세계관: SillyTavern 설정(전역) · 채팅별 연결 정보: 각 채팅 파일</td></tr>
-                <tr><th>슬래시 명령</th><td><code>/chrono 1995</code> <code>/chrono off</code> <code>/chrono-world 이름</code> <code>/chrono-preview</code> <code>/chrono-ai</code></td></tr>
-            </table>
+        <div class="crn-kv">
+            <div class="crn-kv-row"><div class="crn-kv-k">지원 환경</div><div class="crn-kv-v">SillyTavern 1.14 이상 (1.19.0에서 검증), PC 및 모바일 브라우저</div></div>
+            <div class="crn-kv-row"><div class="crn-kv-k">시점 형식</div><div class="crn-kv-v"><code>2015</code> · <code>2015-06</code> · <code>2015-06-30</code> · <code>-500</code>(기원전)<br>연·월 단위 시점은 그 기간 전체 포함</div></div>
+            <div class="crn-kv-row"><div class="crn-kv-k">기간 형식</div><div class="crn-kv-v"><code>1970~1981</code> · <code>1991-09~1998-05</code> · <code>1991~</code>(진행 중)<br>기준 시점에 따라 ongoing / ended 표시</div></div>
+            <div class="crn-kv-row"><div class="crn-kv-k">칸 옵션</div><div class="crn-kv-v">항상(핀), 키워드, 고정 우선도(-100~100), 비밀(아는 인물), 대체, 사용 여부, 번역 보기</div></div>
+            <div class="crn-kv-row"><div class="crn-kv-k">대체된 이전 칸</div><div class="crn-kv-v">과거 기록으로 표시해서 삽입(기본) / 삽입하지 않음 — 설정 탭에서 선택</div></div>
+            <div class="crn-kv-row"><div class="crn-kv-k">등장 인물 반영</div><div class="crn-kv-v">끄기 / 등장 인물 우선(기본, +40점) / 등장 인물만 넣기 — 스토리·환경 칸은 영향 없음</div></div>
+            <div class="crn-kv-row"><div class="crn-kv-k">되돌리기</div><div class="crn-kv-v">삭제한 시점·칸 최대 30개, 새로고침 전까지</div></div>
+            <div class="crn-kv-row"><div class="crn-kv-k">시점 단위 설정</div><div class="crn-kv-v">칸별(기본) / 전부 항상 / 전부 키워드, 시점 켜기·끄기<br>시점 설정이 칸별 핀보다 우선</div></div>
+            <div class="crn-kv-row"><div class="crn-kv-k">오래된 칸 줄여 넣기</div><div class="crn-kv-v">기본값: 설정 탭(끄기, 전문 유지 12개 시점)<br>세계관별 설정: 타임라인 탭의 세계관 아래에서 기본값 따름 / 켜기 / 끄기, 전문 유지 시점 수 개별 지정<br>진행 중인 기간은 최근으로 취급</div></div>
+            <div class="crn-kv-row"><div class="crn-kv-k">키워드 판정</div><div class="crn-kv-v">영어: 단어 단위 · 한글 1~2자: 단어 첫머리 · 일본어·중국어 및 한글 3자 이상: 포함 여부 · <code>/정규식/</code></div></div>
+            <div class="crn-kv-row"><div class="crn-kv-k">삽입 위치</div><div class="crn-kv-v">프롬프트 맨 앞 / 캐릭터 정의 뒤 / 대화 속 지정 깊이<br>역할: System · User · Assistant</div></div>
+            <div class="crn-kv-row"><div class="crn-kv-k">기본 예산</div><div class="crn-kv-v">1,500 토큰 (최신 가중치 60 · 핀 보너스 40 · 키워드 보너스 30 · 스캔 깊이 4)</div></div>
+            <div class="crn-kv-row"><div class="crn-kv-k">생성용 API</div><div class="crn-kv-v">OpenAI · Claude · Gemini (AI Studio) · Gemini Vertex AI (Express / 서비스 계정 JSON) · DeepSeek · GLM (Z.AI) · OpenAI 호환</div></div>
+            <div class="crn-kv-row"><div class="crn-kv-k">파일 형식</div><div class="crn-kv-v">JSON(백업용), 텍스트 <code>.txt</code>(메모장 편집용) 내보내기·불러오기</div></div>
+            <div class="crn-kv-row"><div class="crn-kv-k">저장 위치</div><div class="crn-kv-v">세계관: SillyTavern 설정(전역) · 채팅별 연결 정보: 각 채팅 파일</div></div>
+            <div class="crn-kv-row"><div class="crn-kv-k">슬래시 명령</div><div class="crn-kv-v"><code>/chrono 1995</code> <code>/chrono off</code> <code>/chrono-world 이름</code> <code>/chrono-preview</code> <code>/chrono-ai</code></div></div>
         </div>
     </section>
 
