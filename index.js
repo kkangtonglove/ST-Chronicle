@@ -14,7 +14,8 @@
  *    through the current connection, a Connection Profile, or a direct source.
  *  - Plain-text import / export.
  *  - Display-only translation (SillyTavern's built-in translator, no LLM).
- *  - Secret entries, "replaces earlier" entries, label language option.
+ *  - Secret entries, "replaces earlier" entries.
+ *  - Keyword languages for AI generation (English / Japanese / Korean / Chinese).
  *  - Rank-based recency, safer short keywords, pinned-budget warning.
  *  - Mobile popup layout fix.
  */
@@ -101,8 +102,11 @@ const DEFAULT_AI = {
     zaiEndpoint: 'common',    // common | coding
     maxTokens: 8000,
     chunkChars: 12000,
+    keyLangs: ['ko', 'en'],   // languages the AI writes keywords in
     systemPrompt: DEFAULT_AI_SYSTEM,
 };
+
+const KEY_LANGS = { en: 'English', ja: 'Japanese', ko: 'Korean', zh: 'Chinese' };
 
 const DEFAULT_SETTINGS = {
     version: STORE_VERSION,
@@ -119,7 +123,6 @@ const DEFAULT_SETTINGS = {
     position: 'before',
     depth: 4,
     role: 0,
-    labelMode: 'en',          // en | ko | both
 
     header: DEFAULT_HEADER,
     debug: false,
@@ -129,7 +132,7 @@ const DEFAULT_SETTINGS = {
 
 const ADVANCED_KEYS = [
     'tokenBudget', 'recencyWeight', 'constantBonus', 'keywordBonus', 'scanDepth',
-    'position', 'depth', 'role', 'header', 'labelMode',
+    'position', 'depth', 'role', 'header',
 ];
 
 // ==================================================================
@@ -170,7 +173,8 @@ function errMsg(e) {
 // Settings / storage
 // ==================================================================
 
-function getSettings() {
+/** Runs once at startup: fills defaults, migrates and normalizes stored data. */
+function initSettings() {
     if (!extension_settings[MODULE_NAME]) {
         extension_settings[MODULE_NAME] = structuredClone(DEFAULT_SETTINGS);
     }
@@ -182,17 +186,28 @@ function getSettings() {
     for (const [k, v] of Object.entries(DEFAULT_AI)) {
         if (s.ai[k] === undefined) s.ai[k] = structuredClone(v);
     }
+    if (!Array.isArray(s.ai.keyLangs)) s.ai.keyLangs = [...DEFAULT_AI.keyLangs];
+    delete s.labelMode; // removed in v3.1
+
     if (!Array.isArray(s.worlds)) s.worlds = [];
-    for (const w of s.worlds) migrateWorld(w);
+    // Normalize every world once, so the hot paths (prompt build, rendering) never have to.
+    s.worlds = s.worlds.filter(Boolean).map(w => {
+        migrateWorld(w);
+        w.id = w.id || uid();
+        w.name = String(w.name ?? '새 세계관');
+        w.nodes = (w.nodes || []).map(normalizeNode);
+        return w;
+    });
 
     const ver = Number(s.version || 1);
-    if (ver < STORE_VERSION) {
-        // v1/v2 stored a Korean header; v3+ ships an English one.
-        if (ver < 3) s.header = DEFAULT_HEADER;
-        s.version = STORE_VERSION;
-        saveSettingsDebounced();
-    }
+    if (ver < 3) s.header = DEFAULT_HEADER; // v1/v2 stored a Korean header
+    s.version = STORE_VERSION;
+    saveSettingsDebounced();
     return s;
+}
+
+function getSettings() {
+    return extension_settings[MODULE_NAME] ?? initSettings();
 }
 
 const saveSettings = () => saveSettingsDebounced();
@@ -366,13 +381,15 @@ function sortBlocks(blocks) {
 }
 
 function sortNodes(nodes) {
-    return [...nodes].sort((a, b) => {
-        const ka = nodeKey(a), kb = nodeKey(b);
-        if (ka === null && kb === null) return 0;
-        if (ka === null) return 1;
-        if (kb === null) return -1;
-        return ka - kb;
-    });
+    return nodes
+        .map(n => ({ n, k: nodeKey(n) }))
+        .sort((a, b) => {
+            if (a.k === null && b.k === null) return 0;
+            if (a.k === null) return 1;
+            if (b.k === null) return -1;
+            return a.k - b.k;
+        })
+        .map(x => x.n);
 }
 
 /** "type|name" identity used for overwrite / replaces matching */
@@ -434,60 +451,74 @@ function getScanText(depth) {
     }
 }
 
-const RE_LETTER = /[\p{L}\p{N}_]/u;
 function escRe(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
 
+const _matchers = new Map();
+
 /**
- * Keyword match rules
- *  - /regex/           → regex
- *  - ASCII keyword     → whole word (Ron ≠ Ronald)
- *  - short (≤2) other  → must start a word (론 matches "론이", not "결론")
- *  - longer other      → substring (스네이프 matches "스네이프가")
+ * Build (once, then cache) a test function for one keyword.
+ *  - /regex/                 → regex
+ *  - ASCII                   → whole word (Ron ≠ Ronald)
+ *  - Hangul, 1–2 letters     → must start a word (론 matches "론이", not "결론")
+ *  - Japanese / Chinese, any → substring (no spaces between words in these languages)
+ *  - anything longer         → substring (스네이프 matches "스네이프가")
  */
-function keywordMatches(k, scanText) {
-    if (k.length > 2 && k.startsWith('/') && k.endsWith('/')) {
-        try { return new RegExp(k.slice(1, -1), 'iu').test(scanText); } catch { return false; }
-    }
+function getMatcher(k) {
+    let m = _matchers.get(k);
+    if (m) return m;
     const kw = k.toLowerCase();
-    if (!kw) return false;
-    if (/^[\x20-\x7E]+$/.test(kw)) {
-        try { return new RegExp(`(?<![\\p{L}\\p{N}_])${escRe(kw)}(?![\\p{L}\\p{N}_])`, 'u').test(scanText); }
-        catch { return scanText.includes(kw); }
+    if (k.length > 2 && k.startsWith('/') && k.endsWith('/')) {
+        let re = null;
+        try { re = new RegExp(k.slice(1, -1), 'iu'); } catch { /* invalid regex → never matches */ }
+        m = re ? (t) => re.test(t) : () => false;
+    } else if (!kw) {
+        m = () => false;
+    } else if (/^[\x20-\x7E]+$/.test(kw)) {
+        const re = new RegExp(`(?<![\\p{L}\\p{N}_])${escRe(kw)}(?![\\p{L}\\p{N}_])`, 'u');
+        m = (t) => re.test(t);
+    } else if (/^[\p{Script=Hangul}]{1,2}$/u.test(kw)) {
+        const re = new RegExp(`(?<![\\p{L}\\p{N}_])${escRe(kw)}`, 'u');
+        m = (t) => re.test(t);
+    } else {
+        m = (t) => t.includes(kw);
     }
-    if ([...kw].length <= 2) {
-        let i = scanText.indexOf(kw);
-        while (i !== -1) {
-            const before = i > 0 ? scanText[i - 1] : '';
-            if (!before || !RE_LETTER.test(before)) return true;
-            i = scanText.indexOf(kw, i + 1);
-        }
-        return false;
-    }
-    return scanText.includes(kw);
+    if (_matchers.size > 5000) _matchers.clear();
+    _matchers.set(k, m);
+    return m;
+}
+
+function keywordMatches(k, scanText) {
+    return getMatcher(k)(scanText);
 }
 
 function hasKeywordHit(block, scanText) {
-    if (!block.keys.length || !scanText) return false;
-    return block.keys.some(k => keywordMatches(k, scanText));
+    const keys = block.keys;
+    if (!scanText || !Array.isArray(keys) || !keys.length) return false;
+    return keys.some(k => keywordMatches(String(k), scanText));
 }
 
-function typeLabel(type, mode) {
-    const t = BLOCK_TYPES[type] ?? BLOCK_TYPES.story;
-    if (mode === 'ko') return t.ko;
-    if (mode === 'both') return `${t.en}(${t.ko})`;
-    return t.en;
-}
-
-/** One prompt line */
-function renderBlockLine(block, mode = 'en') {
+/** One prompt line (labels are always English) */
+function renderBlockLine(block) {
     const t = BLOCK_TYPES[block.type] ?? BLOCK_TYPES.story;
-    let label = typeLabel(block.type, mode);
+    let label = t.en;
     if (t.named && block.name) label += ` (${block.name})`;
     if (block.secret) label += block.knownBy ? ` [SECRET, known only to: ${block.knownBy}]` : ' [SECRET]';
     return `${label}: ${String(block.content).trim()}`;
 }
 
 const _tokenCache = new Map();
+
+/** Rough token estimate (no tokenizer call). */
+function estTokens(text) {
+    const s = String(text);
+    const cjk = (s.match(/[\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af]/g) || []).length;
+    return Math.ceil(cjk * 0.9 + (s.length - cjk) / 4);
+}
+
+/** A safe lower bound: real token counts are almost never below this. */
+function estTokensLow(text) {
+    return Math.floor(String(text).length / 8);
+}
 
 async function countTokens(text) {
     if (!text) return 0;
@@ -496,8 +527,7 @@ async function countTokens(text) {
     try {
         n = await getTokenCountAsync(text);
     } catch {
-        const ko = (text.match(/[ㄱ-힣]/g) || []).length;
-        n = Math.ceil(ko / 2 + (text.length - ko) / 4);
+        n = estTokens(text);
     }
     if (_tokenCache.size > 1200) _tokenCache.clear();
     _tokenCache.set(text, n);
@@ -515,24 +545,23 @@ async function buildPacket() {
 
     const nowLimit = conf.now ? endKey(parseDate(conf.now)) : null;
 
-    // 1) time cut-off
-    const nodes = sortNodes((world.nodes || []).map(normalizeNode));
+    // 1) time cut-off (stored data is already normalized at load / edit time)
     let candidates = [];
     let excluded = 0;
 
-    for (const node of nodes) {
+    for (const node of (world.nodes || [])) {
         const key = nodeKey(node);
-        if (key === null) continue;
-        const live = node.blocks.filter(b => b.enabled && String(b.content).trim());
+        if (key === null || !Array.isArray(node.blocks)) continue;
+        const live = node.blocks.filter(b => b.enabled !== false && String(b.content ?? '').trim());
         if (!live.length) continue;
         if (nowLimit !== null && key > nowLimit) { excluded += live.length; continue; }
-        for (const b of live) candidates.push({ node, block: b, key });
+        for (const b of live) candidates.push({ node, block: b.constant === undefined ? { ...b, constant: true } : b, key });
     }
 
     // 2) "replaces earlier": drop older entries of the same person/pair
     const latestReplace = new Map();
     for (const c of candidates) {
-        if (!c.block.replaces || !c.block.name) continue;
+        if (!c.block.replaces || !c.block.name) continue; // replaces only exists on named types
         const nk = nameKey(c.block);
         if (!latestReplace.has(nk) || latestReplace.get(nk) < c.key) latestReplace.set(nk, c.key);
     }
@@ -550,7 +579,7 @@ async function buildPacket() {
     const scanText = getScanText(s.scanDepth);
     const picked = [];
     for (const c of candidates) {
-        const hit = hasKeywordHit(c.block, scanText);
+        const hit = !c.block.constant || s.keywordBonus ? hasKeywordHit(c.block, scanText) : false;
         if (!c.block.constant && !hit) continue;
         picked.push({ ...c, hit });
     }
@@ -577,15 +606,18 @@ async function buildPacket() {
     const pinnedNodes = new Set();
 
     for (const p of byScore) {
-        p.line = renderBlockLine(p.block, s.labelMode);
-        const lineCost = await countTokens(p.line) + 1;
+        p.line = renderBlockLine(p.block);
+        const nodeCost = seenNodes.has(p.node.id) ? 0 : 6;
+        // Only run the real tokenizer when the line could still fit; a cheap
+        // lower-bound estimate rules out the rest (big speed-up on large worlds).
+        const fits = total + nodeCost + estTokensLow(p.line) <= budget;
+        const lineCost = fits ? await countTokens(p.line) + 1 : estTokens(p.line) + 1;
         if (p.block.constant) {
             pinnedTokens += lineCost + (pinnedNodes.has(p.node.id) ? 0 : 6);
             pinnedNodes.add(p.node.id);
         }
-        const cost = lineCost + (seenNodes.has(p.node.id) ? 0 : 6);
-        if (total + cost > budget) { dropped.push(p); continue; }
-        total += cost;
+        if (!fits || total + nodeCost + lineCost > budget) { dropped.push(p); continue; }
+        total += nodeCost + lineCost;
         seenNodes.add(p.node.id);
         used.push(p);
     }
@@ -607,10 +639,12 @@ async function buildPacket() {
     if (used.some(p => p.block.secret)) header = (header ? header + '\n' : '') + SECRET_NOTE;
     const body = groups.map(g => `[${formatDate(g.node.date)}]\n${g.lines.join('\n')}`).join('\n\n');
 
-    const text = `<chronicle current_time="${esc(nowLabel)}">\n` +
-        (header ? header + '\n\n' : '') + body + '\n</chronicle>';
+    const head = `<chronicle current_time="${esc(nowLabel)}">\n` + (header ? header + '\n\n' : '');
+    const text = head + body + '\n</chronicle>';
 
-    return { text, used, dropped, excluded, replaced, tokens: await countTokens(text), pinnedTokens, world, now: conf.now };
+    // header + per-line costs already counted (cached), so no second pass over the whole text
+    const tokens = total + await countTokens(head) + 4;
+    return { text, used, dropped, excluded, replaced, tokens, pinnedTokens, world, now: conf.now };
 }
 
 // ==================================================================
@@ -683,8 +717,7 @@ function exportText(world) {
     out.push('# [날짜] 아래에 칸 종류(스토리/인물/관계/환경), 그 아래 옵션 줄(키워드:, 우선도:, 아는 사람:)과 내용을 씁니다.');
     out.push('# 칸 옵션: [항상] = 항상 삽입, [비밀] = 비밀, [대체] = 같은 이름의 이전 칸 대체, [꺼짐] = 사용 안 함');
     out.push('');
-    for (const n0 of sortNodes(world.nodes || [])) {
-        const node = normalizeNode(n0);
+    for (const node of sortNodes(world.nodes || [])) {
         out.push(`[${formatDate(node.date) || node.date}]`);
         for (const b of sortBlocks(node.blocks)) {
             const t = BLOCK_TYPES[b.type];
@@ -890,7 +923,16 @@ const DETAIL_TEXT = {
 const ERA_COUNT = { brief: 4, normal: 7, detailed: 10 };
 const LANG_TEXT = { ko: 'Korean', en: 'English' };
 
-function formatSpec(lang, detail) {
+function keysRule(L, keyLangs) {
+    const langs = (keyLangs || []).map(k => KEY_LANGS[k]).filter(Boolean);
+    if (!langs.length) {
+        return `Include both the ${L} form and the original-language form of names when they differ.`;
+    }
+    const list = langs.length === 1 ? langs[0] : `${langs.slice(0, -1).join(', ')} and ${langs.at(-1)}`;
+    return `Write every name and key term in each of these languages: ${list}. Use the established form in each language (official translation or common transliteration); if a language has no established form, transliterate it.`;
+}
+
+function formatSpec(lang, detail, keyLangs) {
     const L = LANG_TEXT[lang] || 'Korean';
     return [
         'Output format (strict):',
@@ -904,7 +946,7 @@ function formatSpec(lang, detail) {
         '- name: required for "character" (the person\'s name) and "relation" (e.g. "A & B"); empty for "story" and "environment". Use exactly the same spelling every time the same person or pair appears.',
         `- content: 1-3 concise sentences written in ${L}. State the facts as of that point in time; never mention anything from a later date.`,
         '- pinned: true for entries that matter in any scene of that period (major events, world rules, the overall state of the world); false for details that matter only when the subject comes up.',
-        `- keys: names, aliases and key terms that should trigger the entry when they appear in the conversation. Required when pinned is false. Include both the ${L} form and the original-language form of names when they differ. Never use single-character keys.`,
+        `- keys: names, aliases and key terms that should trigger the entry when they appear in the conversation. Required when pinned is false. ${keysRule(L, keyLangs)} Never use single-character keys.`,
         '- secret: true when the fact is true but hidden from most characters at that time; list in known_by the characters who know it (comma-separated), or leave known_by empty if nobody knows yet.',
         '- replaces: true on a character or relation entry whose new state makes the earlier entries of that same name outdated (for example a changed allegiance or status). Otherwise false.',
         '- priority: an integer from -100 to 100; 0 by default, higher for entries that must survive when space is short.',
@@ -991,7 +1033,7 @@ async function askJson(system, user, signal, ui, label) {
  */
 async function runGeneration(opts, ui) {
     const ai = getSettings().ai;
-    const system = `${String(ai.systemPrompt || DEFAULT_AI_SYSTEM).trim()}\n\n${formatSpec(opts.lang, opts.detail)}`;
+    const system = `${String(ai.systemPrompt || DEFAULT_AI_SYSTEM).trim()}\n\n${formatSpec(opts.lang, opts.detail, opts.keyLangs)}`;
     const result = [];
     const names = new Set();
     const collect = (nodes) => {
@@ -1171,7 +1213,6 @@ function refreshPanel() {
     $('#chronicle_position').val(s.position);
     $('#chronicle_depth').val(s.depth);
     $('#chronicle_role').val(String(s.role));
-    $('#chronicle_labelmode').val(s.labelMode);
     $('#chronicle_header').val(s.header);
     $('#chronicle_debug').prop('checked', !!s.debug);
 
@@ -1380,9 +1421,6 @@ function bindPanel() {
     $('#chronicle_role').on('change', function () {
         getSettings().role = Number($(this).val()); saveSettings(); updateInjection();
     });
-    $('#chronicle_labelmode').on('change', function () {
-        getSettings().labelMode = String($(this).val()); saveSettings(); updateInjection();
-    });
     $('#chronicle_header').on('input', function () {
         getSettings().header = String($(this).val()); saveSoon(); updateSoon();
     });
@@ -1563,7 +1601,13 @@ async function openAiGenerator() {
                 <div class="chr-seg-btn chr-active" data-val="normal">보통</div>
                 <div class="chr-seg-btn" data-val="detailed">자세히</div>
             </div>
+            <label>키워드 언어</label>
+            <div class="chr-seg chr-seg-sm chr-multi" data-name="keyLangs" title="여러 개 고를 수 있습니다">
+                ${Object.entries({ ko: '한국어', en: 'English', ja: '日本語', zh: '中文' }).map(([v, l]) =>
+                    `<div class="chr-seg-btn ${ai.keyLangs.includes(v) ? 'chr-active' : ''}" data-val="${v}">${l}</div>`).join('')}
+            </div>
         </div>
+        <small class="chr-hint">키워드 언어는 여러 개 고를 수 있습니다. 고른 언어마다 이름·용어를 키워드로 넣습니다. 하나도 안 고르면 내용 언어와 원어를 함께 넣습니다.</small>
         ${editing ? `<small class="chr-hint chr-ai-mergehint" hidden>'${esc(editing.name)}' 에 합칩니다. 같은 시점·같은 인물(관계) 칸은 새 내용으로 덮어씁니다.</small>` : ''}
 
         <label class="chr-ai-label">추가 요구 <small>(선택)</small></label>
@@ -1601,6 +1645,13 @@ async function openAiGenerator() {
     $r.on('click', '.chr-seg-btn', function () {
         if ($(this).hasClass('chr-disabled')) return;
         const $seg = $(this).closest('.chr-seg');
+        if ($seg.hasClass('chr-multi')) {
+            $(this).toggleClass('chr-active');
+            const langs = $seg.find('.chr-seg-btn.chr-active').map((_, el) => el.dataset.val).get();
+            getSettings().ai.keyLangs = langs; // remembered for next time
+            saveSoon();
+            return;
+        }
         $seg.find('.chr-seg-btn').removeClass('chr-active');
         $(this).addClass('chr-active');
         state[$seg.data('name')] = String($(this).data('val'));
@@ -1699,6 +1750,7 @@ async function openAiGenerator() {
             title: String($r.find('.chr-ai-title').val() || ''),
             lang: state.lang,
             detail: state.detail,
+            keyLangs: [...getSettings().ai.keyLangs],
             extra: String($r.find('.chr-ai-extra').val() || ''),
         };
         if (opts.mode === 'text' && !opts.text.trim()) return toast('warning', '정리할 글을 넣어 주세요.');
@@ -1804,7 +1856,7 @@ async function openEditor() {
         world = createWorld('내 세계관');
         refreshPanel();
     }
-    if (!Array.isArray(world.nodes)) world.nodes = [];
+    world.nodes = (Array.isArray(world.nodes) ? world.nodes : []).map(normalizeNode);
 
     const root = document.createElement('div');
     root.className = 'chr-editor';
@@ -1952,7 +2004,7 @@ function bindEditorEvents($nodes, world, render) {
         else if ($t.hasClass('chr-keys')) {
             block.keys = String($t.val()).split(',').map(k => k.trim()).filter(Boolean);
             $t.toggleClass('chr-warnkey', hasShortKey(block.keys));
-            refreshGroupHead($t.closest('[data-node]'), findNode(world, nodeId));
+            refreshGroupHead($t, findNode(world, nodeId));
         }
         else if ($t.hasClass('chr-pri')) block.priority = Number($t.val()) || 0;
         else if ($t.hasClass('chr-knownby')) block.knownBy = String($t.val());
@@ -1979,7 +2031,7 @@ function bindEditorEvents($nodes, world, render) {
             block.replaces = !block.replaces;
             $t.toggleClass('chr-on', block.replaces);
         }
-        refreshGroupHead($t.closest('[data-node]'), findNode(world, nodeId));
+        refreshGroupHead($t, findNode(world, nodeId));
         saveSoon(); updateSoon();
     });
 
@@ -1990,7 +2042,7 @@ function bindEditorEvents($nodes, world, render) {
         block.enabled = !block.enabled;
         $(this).closest('[data-block]').toggleClass('chr-off', !block.enabled);
         $(this).find('i').attr('class', `fa-solid ${block.enabled ? 'fa-eye' : 'fa-eye-slash'}`);
-        refreshGroupHead($(this).closest('[data-node]'), findNode(world, nodeId));
+        refreshGroupHead($(this), findNode(world, nodeId));
         saveSoon(); updateSoon();
     });
 
@@ -2077,15 +2129,13 @@ function bindEditorEvents($nodes, world, render) {
 
 // ---- rendering ----
 
-/** Redraw only the group header lines (keeps the field being typed in). */
-function refreshGroupHead($node, node) {
-    if (!node || !$node || !$node.length) return;
-    const $tmp = $('<div>').html(renderBlocksHtml(node));
-    $node.find('.chr-group').each(function () {
-        const type = $(this).data('group');
-        const $newHead = $tmp.find(`.chr-group[data-group="${type}"] .chr-group-head`);
-        if ($newHead.length) $(this).find('.chr-group-head').html($newHead.html());
-    });
+/** Redraw one group's header line only (keeps the field being typed in). */
+function refreshGroupHead($el, node, type) {
+    if (!node || !$el || !$el.length) return;
+    const $group = $el.closest('.chr-group');
+    const t = type || String($group.data('group'));
+    const list = (node.blocks || []).filter(b => b.type === t);
+    if ($group.length && list.length) $group.find('.chr-group-head').html(groupHeadInner(node, t, list));
 }
 
 function matchesSearch(node) {
@@ -2101,10 +2151,8 @@ function matchesSearch(node) {
 const _openGroups = new Set();
 const groupKey = (nodeId, type) => `${nodeId}:${type}`;
 
-function renderOneBlock(b0) {
-    const b = normalizeBlock(b0);
-    Object.assign(b0, b);
-    const t = BLOCK_TYPES[b.type];
+function renderOneBlock(b) {
+    const t = BLOCK_TYPES[b.type] ?? BLOCK_TYPES.story;
     const label = t.named
         ? `<input type="text" class="text_pole chr-name" value="${esc(b.name)}" placeholder="${t.ko}명">`
         : `<span>${t.ko}</span>`;
@@ -2138,56 +2186,53 @@ function renderOneBlock(b0) {
     </div>`;
 }
 
+/** Inner HTML of a group's header line */
+function groupHeadInner(node, type, list) {
+    const t = BLOCK_TYPES[type];
+    const preview = list
+        .map(b => (b.name ? `${b.name}: ` : '') + String(b.content || '').replace(/\s+/g, ' ').trim())
+        .filter(Boolean).join('  ·  ');
+    const hidden = list.filter(b => !b.enabled).length;
+    const live = list.filter(b => b.enabled);
+    const pinned = live.filter(b => b.constant).length;
+    const dead = live.filter(b => !b.constant && !b.keys.length).length;
+    const secrets = live.filter(b => b.secret).length;
+
+    let mark = '';
+    if (live.length && pinned === live.length) {
+        mark = `<span class="chr-mark chr-mark--pin" title="${t.ko} ${live.length}개 모두 항상 삽입됩니다"><i class="fa-solid fa-thumbtack"></i>항상</span>`;
+    } else if (live.length && pinned === 0) {
+        mark = '<span class="chr-mark chr-mark--key" title="항상 삽입이 하나도 없습니다 — 키워드가 나올 때만 삽입됩니다"><i class="fa-solid fa-key"></i>키워드</span>';
+    } else if (live.length) {
+        mark = `<span class="chr-mark chr-mark--half" title="${live.length}개 중 ${pinned}개만 항상 삽입, 나머지는 키워드일 때만"><i class="fa-solid fa-thumbtack"></i>${pinned}/${live.length}</span>`;
+    }
+    if (dead) mark += `<span class="chr-mark chr-mark--warn" title="핀도 꺼져 있고 키워드도 없어 절대 삽입되지 않는 글 ${dead}개"><i class="fa-solid fa-triangle-exclamation"></i>${dead}</span>`;
+    if (secrets) mark += `<span class="chr-mark chr-mark--secret" title="비밀 ${secrets}개"><i class="fa-solid fa-user-secret"></i>${secrets}</span>`;
+
+    return `
+        <i class="fa-solid fa-caret-right chr-group-caret"></i>
+        <i class="fa-solid ${t.icon} chr-group-icon"></i>
+        <span class="chr-group-label">${t.ko}</span>
+        <span class="chr-group-count">${list.length}</span>
+        ${mark}
+        ${hidden ? `<span class="chr-group-off" title="꺼진 글 ${hidden}개">−${hidden}</span>` : ''}
+        <span class="chr-group-preview">${esc(preview)}</span>
+        <div class="chr-ico chr-group-add" data-add="${type}" title="${t.ko} 추가"><i class="fa-solid fa-plus"></i></div>`;
+}
+
 function renderBlocksHtml(node) {
-    const blocks = (node.blocks || []).map(b => { const nb = normalizeBlock(b); Object.assign(b, nb); return b; });
+    const blocks = node.blocks || [];
     if (!blocks.length) {
         return '<div class="chr-noblocks">이 시점에 글이 없습니다. 위의 + 버튼으로 추가하세요.</div>';
     }
-
     let html = '';
     for (const type of TYPE_ORDER) {
         const list = blocks.filter(b => b.type === type);
         if (!list.length) continue;
-        const t = BLOCK_TYPES[type];
         const open = _openGroups.has(groupKey(node.id, type));
-
-        const preview = list
-            .map(b => (b.name ? `${b.name}: ` : '') + String(b.content || '').replace(/\s+/g, ' ').trim())
-            .filter(Boolean).join('  ·  ');
-        const hidden = list.filter(b => !b.enabled).length;
-
-        const live = list.filter(b => b.enabled);
-        const pinned = live.filter(b => b.constant).length;
-        const dead = live.filter(b => !b.constant && !b.keys.length).length;
-        const secrets = live.filter(b => b.secret).length;
-
-        let mark = '';
-        if (live.length && pinned === live.length) {
-            mark = `<span class="chr-mark chr-mark--pin" title="${t.ko} ${live.length}개 모두 항상 삽입됩니다"><i class="fa-solid fa-thumbtack"></i>항상</span>`;
-        } else if (live.length && pinned === 0) {
-            mark = '<span class="chr-mark chr-mark--key" title="항상 삽입이 하나도 없습니다 — 키워드가 나올 때만 삽입됩니다"><i class="fa-solid fa-key"></i>키워드</span>';
-        } else if (live.length) {
-            mark = `<span class="chr-mark chr-mark--half" title="${live.length}개 중 ${pinned}개만 항상 삽입, 나머지는 키워드일 때만"><i class="fa-solid fa-thumbtack"></i>${pinned}/${live.length}</span>`;
-        }
-        const warnMark = dead
-            ? `<span class="chr-mark chr-mark--warn" title="핀도 꺼져 있고 키워드도 없어 절대 삽입되지 않는 글 ${dead}개"><i class="fa-solid fa-triangle-exclamation"></i>${dead}</span>`
-            : '';
-        const secretMark = secrets
-            ? `<span class="chr-mark chr-mark--secret" title="비밀 ${secrets}개"><i class="fa-solid fa-user-secret"></i>${secrets}</span>`
-            : '';
-
         html += `
         <div class="chr-group ${open ? 'chr-open' : ''}" data-group="${type}" data-type="${type}">
-            <div class="chr-group-head">
-                <i class="fa-solid fa-caret-right chr-group-caret"></i>
-                <i class="fa-solid ${t.icon} chr-group-icon"></i>
-                <span class="chr-group-label">${t.ko}</span>
-                <span class="chr-group-count">${list.length}</span>
-                ${mark}${warnMark}${secretMark}
-                ${hidden ? `<span class="chr-group-off" title="꺼진 글 ${hidden}개">−${hidden}</span>` : ''}
-                <span class="chr-group-preview">${esc(preview)}</span>
-                <div class="chr-ico chr-group-add" data-add="${type}" title="${t.ko} 추가"><i class="fa-solid fa-plus"></i></div>
-            </div>
+            <div class="chr-group-head">${groupHeadInner(node, type, list)}</div>
             <div class="chr-group-body">${list.map(renderOneBlock).join('')}</div>
         </div>`;
     }
@@ -2322,7 +2367,7 @@ function registerSlashCommands() {
 
 jQuery(async () => {
     try {
-        getSettings();
+        initSettings();
 
         const html = await (await fetch(`${EXT_URL}settings.html`)).text();
         $('#extensions_settings2').append(html);
@@ -2335,11 +2380,12 @@ jQuery(async () => {
             refreshPanel();
             await updateInjection();
         });
-        eventSource.on(event_types.GENERATION_STARTED, async () => {
+        // Rebuild right before each real generation (keywords depend on the latest messages).
+        // Dry runs (prompt previews / token counts) reuse the last result.
+        eventSource.on(event_types.GENERATION_STARTED, async (_type, _opts, dryRun) => {
+            if (dryRun) return;
             await updateInjection();
         });
-        eventSource.on(event_types.MESSAGE_SENT, () => updateSoon());
-        eventSource.on(event_types.MESSAGE_RECEIVED, () => updateSoon());
 
         await updateInjection();
         console.log('[크로니클] 확장을 불러왔습니다.');
@@ -2349,4 +2395,4 @@ jQuery(async () => {
 });
 
 // Exposed for tests only (not used by SillyTavern).
-export const __test = { parseDate, parseText, exportText, keywordMatches, mergeNodes, aiToNodes, parseJsonLoose, splitText, renderBlockLine, normalizeBlock };
+export const __test = { parseDate, parseText, exportText, keywordMatches, mergeNodes, aiToNodes, parseJsonLoose, splitText, renderBlockLine, normalizeBlock, buildPacket, formatSpec };

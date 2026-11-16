@@ -658,10 +658,6 @@
     flex: 0 0 auto;
 }
 
-.chr-blocks > .chr-block:first-child {
-    border-top: none;
-}
-
 .chr-block.chr-off {
     opacity: 0.4;
 }
