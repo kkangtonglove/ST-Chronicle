@@ -12,20 +12,22 @@
    (safe to paste into a board post without touching its styles)
    ========================================================= */
 .crn {
-    --bg: #0f1012;
-    --panel: #17181b;
-    --panel-2: #1d1f23;
-    --line: #2a2c31;
-    --text: #e6e3dc;
-    --sub: #a4a09a;
-    --dim: #6f6c67;
-    --amber: #e3a23b;
-    --amber-soft: rgba(227, 162, 59, 0.12);
-    --story: #7aa2f7;
-    --character: #9ece6a;
-    --relation: #f7768e;
-    --environment: #e0af68;
-    --secret: #bb9af7;
+    --bg: #f7f5f0;
+    --panel: #ffffff;
+    --panel-2: #f2efe8;
+    --line: #e3dfd6;
+    --text: #1f1d1a;
+    --sub: #55514b;
+    --dim: #8c877e;
+    --amber: #b8701a;
+    --amber-soft: rgba(214, 140, 40, 0.10);
+    --story: #2f63c9;
+    --character: #3d8418;
+    --relation: #c23a57;
+    --environment: #a96a0c;
+    --secret: #7a4fc4;
+    --code-bg: #f4f1ea;
+    --shadow: 0 10px 30px rgba(60, 45, 20, 0.10);
     --mono: 'JetBrains Mono', 'D2Coding', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
     box-sizing: border-box;
@@ -44,14 +46,14 @@
 
 .crn *, .crn *::before, .crn *::after { box-sizing: inherit; }
 .crn img { display: block; max-width: 100%; height: auto; }
-.crn a { color: var(--amber); text-decoration: none; border-bottom: 1px solid rgba(227, 162, 59, 0.35); }
+.crn a { color: var(--amber); text-decoration: none; border-bottom: 1px solid rgba(184, 112, 26, 0.35); }
 .crn code, .crn kbd {
     font-family: var(--mono);
     font-size: 0.86em;
     padding: 1px 6px;
     border-radius: 4px;
-    background: #24262b;
-    color: #f0d9a8;
+    background: #f1ebdf;
+    color: #8a520f;
 }
 
 /* ---------- hero ---------- */
@@ -61,8 +63,9 @@
     padding: 56px 40px 40px;
     border-bottom: 1px solid var(--line);
     background:
-        radial-gradient(900px 380px at 85% -10%, rgba(227, 162, 59, 0.16), transparent 70%),
-        radial-gradient(600px 300px at 0% 110%, rgba(122, 162, 247, 0.08), transparent 70%);
+        radial-gradient(900px 380px at 85% -10%, rgba(230, 160, 60, 0.20), transparent 70%),
+        radial-gradient(600px 300px at 0% 110%, rgba(80, 130, 230, 0.08), transparent 70%),
+        #fbfaf6;
     overflow: hidden;
 }
 
@@ -116,7 +119,7 @@
     object-position: top;
     border-radius: 14px;
     border: 1px solid var(--line);
-    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55);
+    box-shadow: 0 24px 60px rgba(40, 30, 10, 0.22);
 }
 
 .crn-hero-phone {
@@ -125,9 +128,9 @@
     bottom: 0;
     width: 250px;
     border-radius: 30px;
-    border: 7px solid #26282d;
-    outline: 1px solid #3a3d44;
-    box-shadow: 0 30px 70px rgba(0, 0, 0, 0.7);
+    border: 7px solid #1c1c1e;
+    outline: 1px solid #c9c4ba;
+    box-shadow: 0 24px 60px rgba(40, 30, 10, 0.30);
 }
 
 /* ---------- sections ---------- */
@@ -228,8 +231,8 @@
     font-weight: 700;
 }
 
-.crn-axis .is-future { color: var(--dim); background: repeating-linear-gradient(135deg, transparent 0 6px, rgba(255,255,255,0.025) 6px 12px); }
-.crn-axis .is-future s { text-decoration-color: rgba(255,255,255,0.3); }
+.crn-axis .is-future { color: var(--dim); background: repeating-linear-gradient(135deg, transparent 0 6px, rgba(0,0,0,0.035) 6px 12px); }
+.crn-axis .is-future s { text-decoration-color: rgba(0,0,0,0.35); }
 
 .crn-diagram-foot {
     display: flex;
@@ -276,6 +279,7 @@
     border-radius: 12px;
     background: var(--panel);
     border: 1px solid var(--line);
+    box-shadow: 0 1px 2px rgba(60, 45, 20, 0.05);
 }
 
 .crn-card .crn-tag {
@@ -311,7 +315,7 @@
     margin-bottom: 10px;
     border-radius: 6px;
     background: var(--amber);
-    color: #1a1308;
+    color: #ffffff;
     font-family: var(--mono);
     font-weight: 700;
     font-size: 14px;
@@ -322,8 +326,8 @@
     border-radius: 12px;
     overflow: hidden;
     border: 1px solid var(--line);
-    background: #111;
-    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+    background: #1b1b1d;
+    box-shadow: var(--shadow);
 }
 
 .crn-shot.is-narrow { max-width: 360px; justify-self: center; }
@@ -360,7 +364,7 @@
     margin-top: 14px;
     padding: 10px 12px;
     border-radius: 8px;
-    background: #222428;
+    background: var(--panel-2);
     font-size: 13.5px;
     color: var(--sub);
 }
@@ -399,8 +403,8 @@
     padding: 18px 20px;
     border-radius: 10px;
     border: 1px solid var(--line);
-    background: #0b0c0e;
-    color: #d8d4cc;
+    background: var(--code-bg);
+    color: #3a3631;
     font-family: var(--mono);
     font-size: 13px;
     line-height: 1.65;
@@ -449,7 +453,7 @@
     gap: 10px;
     padding: 16px 18px;
     border-radius: 12px;
-    border: 1px solid rgba(227, 162, 59, 0.4);
+    border: 1px solid rgba(184, 112, 26, 0.35);
     background: var(--amber-soft);
 }
 
@@ -457,7 +461,7 @@
     flex: 1 1 320px;
     padding: 10px 12px;
     font-size: 14px;
-    background: #0b0c0e;
+    background: #ffffff;
     color: var(--amber);
     border: 1px solid var(--line);
     border-radius: 8px;
@@ -506,7 +510,7 @@
 }
 </style>
 </head>
-<body style="margin:0;background:#0f1012;">
+<body style="margin:0;background:#f7f5f0;">
 
 <article class="crn">
 
@@ -530,8 +534,8 @@
     <!-- ===================== 01 ===================== -->
     <section class="crn-sec">
         <div class="crn-sec-head"><span class="crn-num">01</span><h2>개요</h2></div>
-        <p class="crn-lead">Chronicle은 세계관의 사건을 <strong>시점</strong> 단위로 기록하고, 채팅마다 지정한 <strong>기준 시점</strong>까지의 기록만 프롬프트에 삽입하는 SillyTavern 확장이다.</p>
-        <p>기준 시점 이후의 기록은 모델에 전달되지 않는다. 따라서 모델은 아직 일어나지 않은 사건을 언급하거나 암시할 수 없다. 하나의 세계관으로 서로 다른 시점의 채팅을 동시에 운용할 수 있다.</p>
+        <p class="crn-lead">Chronicle은 세계관의 사건을 <strong>시점</strong> 단위로 기록하고, 채팅마다 지정한 <strong>기준 시점</strong>까지의 기록만 프롬프트에 삽입하는 SillyTavern 확장.</p>
+        <p>기준 시점 이후의 기록은 모델에 전달되지 않음. 아직 일어나지 않은 사건의 언급·암시 차단. 하나의 세계관으로 서로 다른 시점의 채팅 동시 운용 가능.</p>
 
         <div class="crn-diagram" role="img" aria-label="기준 시점 차단 예시">
             <div class="crn-axis">
@@ -546,13 +550,13 @@
                 <span class="ng">■ 차단: 기준 시점 이후 전부</span>
             </div>
         </div>
-        <p style="font-size:14px;color:var(--dim);">예시: 기준 시점을 1995-06-24(볼드모트 부활)로 지정하면, 모델은 이후의 신비부 전투와 호그와트 전투를 알지 못한다.</p>
+        <p style="font-size:14px;color:var(--dim);">예시: 기준 시점 1995-06-24(볼드모트 부활) 지정 시, 이후의 신비부 전투와 호그와트 전투는 모델에 전달되지 않음.</p>
     </section>
 
     <!-- ===================== 02 ===================== -->
     <section class="crn-sec">
         <div class="crn-sec-head"><span class="crn-num">02</span><h2>기록 구조</h2></div>
-        <p>시점 하나에 네 종류의 칸을 원하는 만큼 둔다. 인물·관계 칸은 이름을 가진다.</p>
+        <p>시점 하나에 네 종류의 칸을 개수 제한 없이 배치. 인물·관계 칸은 이름 필수.</p>
         <div class="crn-types">
             <div class="crn-type" style="--c:var(--story)"><b>스토리</b><span>Story</span><p>그 시점에 일어난 사건</p></div>
             <div class="crn-type" style="--c:var(--character)"><b>인물</b><span>Character</span><p>한 인물의 상태·행동·변화</p></div>
@@ -560,13 +564,13 @@
             <div class="crn-type" style="--c:var(--environment)"><b>환경</b><span>Environment</span><p>제도·장소·정세·세계 규칙</p></div>
         </div>
         <pre><span class="k">[1995-06-24]</span>
-  <span class="s">스토리</span>   볼드모트가 해리의 피를 사용한 의식으로 육체를 되찾는다.
+  <span class="s">스토리</span>   해리의 피를 사용한 의식으로 볼드모트의 육체 회복.
   <span class="c">인물</span>     세베루스 스네이프 → 이중 첩자 역할로 복귀   <span class="x">[비밀]</span> <span class="m">[대체]</span>
   <span class="r">관계</span>     해리 포터 &amp; 론 위즐리 → …
-  <span class="e">환경</span>     마법부가 볼드모트의 귀환을 부정한다.
+  <span class="e">환경</span>     마법부, 볼드모트의 귀환 부정.
 
 <span class="k">[1991-09~1998-05]</span>   <span class="m">← 기간형 시점</span>
-  <span class="e">환경</span>     해리 포터는 호그와트 재학 중이다.</pre>
+  <span class="e">환경</span>     해리 포터, 호그와트 재학 중.</pre>
     </section>
 
     <!-- ===================== 03 ===================== -->
@@ -576,52 +580,52 @@
             <div class="crn-card">
                 <span class="crn-tag">TIME CUT-OFF</span>
                 <h3>기준 시점 차단</h3>
-                <p>편집기에서 시점의 체크박스를 누르면 그 시점이 기준이 된다. 처음부터 해당 시점까지 자동으로 체크되며, 이후 시점은 흐리게 표시되고 삽입에서 제외된다.</p>
+                <p>편집기에서 시점의 체크박스를 누르면 해당 시점이 기준으로 지정됨. 처음부터 해당 시점까지 자동 체크, 이후 시점은 흐리게 표시되고 삽입에서 제외.</p>
             </div>
             <div class="crn-card">
                 <span class="crn-tag">INSERTION RULE</span>
                 <h3>핀과 키워드</h3>
-                <p>핀(항상)이 켜진 칸은 조건 없이 삽입된다. 핀이 꺼진 칸은 최근 대화에 키워드가 등장할 때만 삽입된다. 정규식 키워드를 지원한다.</p>
+                <p>핀(항상)이 켜진 칸은 조건 없이 삽입. 핀이 꺼진 칸은 최근 대화에 키워드가 등장할 때만 삽입. 정규식 키워드 지원.</p>
             </div>
             <div class="crn-card">
                 <span class="crn-tag">TOKEN BUDGET</span>
                 <h3>토큰 예산과 우선순위</h3>
-                <p>예산을 넘으면 점수가 낮은 칸부터 제외한다. 점수는 최신도, 고정 우선도, 핀 보너스, 키워드 적중 보너스의 합이다. 삽입 결과는 다시 연대순으로 정렬된다.</p>
+                <p>예산 초과 시 점수가 낮은 칸부터 제외. 점수 = 최신도 + 고정 우선도 + 핀 보너스 + 키워드 적중 보너스. 삽입 결과는 연대순으로 재정렬.</p>
             </div>
             <div class="crn-card">
                 <span class="crn-tag">SECRET · REPLACE</span>
                 <h3>비밀 칸과 대체 칸</h3>
-                <p>비밀 칸은 아는 인물을 함께 기록하며, 모르는 인물이 언급하지 않도록 안내문이 자동으로 붙는다. 대체 칸은 그 인물의 현재 상태가 되고, 같은 이름의 이전 칸은 과거 기록(PAST)으로 표시되어 변화 과정이 유지된다.</p>
+                <p>비밀 칸은 아는 인물을 함께 기록하고, 모르는 인물의 언급을 막는 안내문 자동 추가. 대체 칸은 그 인물의 현재 상태로 취급되며, 같은 이름의 이전 칸은 과거 기록(PAST)으로 표시되어 변화 과정 유지.</p>
             </div>
             <div class="crn-card">
                 <span class="crn-tag">PERIOD</span>
                 <h3>기간형 시점</h3>
-                <p>날짜를 <code>1970~1981</code> 형식으로 입력하면 그 기간 동안 이어지는 상태가 된다. 기준 시점이 기간 안이면 <code>ongoing</code>, 지나면 <code>ended</code>로 표시되어 삽입된다. 끝나지 않은 상태는 <code>1991~</code>로 입력한다.</p>
+                <p>날짜를 <code>1970~1981</code> 형식으로 입력 시 그 기간 동안 이어지는 상태로 취급. 기준 시점이 기간 안이면 <code>ongoing</code>, 지나면 <code>ended</code>로 표시되어 삽입. 끝나지 않은 상태는 <code>1991~</code>로 입력.</p>
             </div>
             <div class="crn-card">
                 <span class="crn-tag">CAST</span>
                 <h3>등장 인물 반영</h3>
-                <p>캐릭터 카드, 그룹 멤버, 페르소나 이름과 최근 대화에 나온 인물을 등장 인물로 판정한다. 해당 인물·관계 칸의 점수를 올리거나, 등장 인물의 칸만 삽입한다.</p>
+                <p>캐릭터 카드, 그룹 멤버, 페르소나 이름, 최근 대화에 나온 인물을 등장 인물로 판정. 해당 인물·관계 칸의 점수 가산 또는 등장 인물의 칸만 삽입.</p>
             </div>
             <div class="crn-card">
                 <span class="crn-tag">AI BUILDER</span>
                 <h3>AI 연대기 생성</h3>
-                <p>자유 양식 텍스트, 또는 작품 이름만으로 연대기를 생성한다. 결과는 미리보기에서 확인한 뒤 등록한다. 기존 세계관에 합칠 때 같은 시점·같은 인물 칸은 덮어쓴다.</p>
+                <p>자유 양식 텍스트 또는 작품 이름만으로 연대기 생성. 결과는 미리보기 확인 후 등록. 기존 세계관에 합칠 때 같은 시점·같은 인물 칸은 덮어씀.</p>
             </div>
             <div class="crn-card">
                 <span class="crn-tag">SEPARATE API</span>
                 <h3>생성용 API 분리</h3>
-                <p>롤플레이 연결과 별개로 연결 프로필 또는 제공자를 지정한다. OpenAI, Claude, Gemini, Gemini Vertex AI, DeepSeek, GLM(Z.AI), OpenAI 호환 주소를 지원한다.</p>
+                <p>롤플레이 연결과 별개로 연결 프로필 또는 제공자 지정. OpenAI, Claude, Gemini, Gemini Vertex AI, DeepSeek, GLM(Z.AI), OpenAI 호환 주소 지원.</p>
             </div>
             <div class="crn-card">
                 <span class="crn-tag">KEYWORD LANGUAGE</span>
                 <h3>키워드 다국어</h3>
-                <p>AI 생성 시 키워드 언어를 한국어·영어·일본어·중국어 중에서 복수 선택한다. 예: <code>스네이프, Snape, スネイプ</code></p>
+                <p>AI 생성 시 키워드 언어를 한국어·영어·일본어·중국어 중에서 복수 선택. 예: <code>스네이프, Snape, スネイプ</code></p>
             </div>
             <div class="crn-card">
                 <span class="crn-tag">VIEW-ONLY TRANSLATION</span>
                 <h3>보기 전용 번역</h3>
-                <p>SillyTavern 기본 번역 기능으로 외국어 칸을 한국어로 표시한다. 칸 단위 또는 전체 단위로 켠다. 모델 API를 사용하지 않으며 프롬프트에는 원문이 들어간다.</p>
+                <p>SillyTavern 기본 번역 기능으로 외국어 칸을 한국어로 표시. 칸 단위 또는 전체 단위로 사용. 모델 API 미사용, 프롬프트에는 원문 삽입.</p>
             </div>
         </div>
     </section>
@@ -636,9 +640,9 @@
                 <h3>세계관 준비</h3>
                 <p>확장 메뉴 → <strong>Chronicle</strong> → <strong>타임라인</strong> 탭.</p>
                 <ul class="crn-list">
-                    <li><strong>[새로]</strong>로 세계관을 만든다.</li>
-                    <li>기존 기록이 있으면 <strong>[불러오기]</strong>로 JSON 또는 텍스트 파일을 읽는다.</li>
-                    <li>기록이 없으면 <strong>[AI로 연대기 만들기]</strong>를 사용한다. (05항 참조)</li>
+                    <li><strong>[새로]</strong>로 세계관 생성.</li>
+                    <li>기존 기록이 있으면 <strong>[불러오기]</strong>로 JSON 또는 텍스트 파일 불러오기.</li>
+                    <li>기록이 없으면 <strong>[AI로 연대기 만들기]</strong> 사용. (05항 참조)</li>
                 </ul>
             </div>
             <picture class="crn-shot is-narrow">
@@ -651,13 +655,13 @@
             <div>
                 <span class="crn-step-no">2</span>
                 <h3>기준 시점 지정</h3>
-                <p><strong>[타임라인 편집기]</strong>를 연다. 원하는 시점 왼쪽의 체크박스를 누른다.</p>
+                <p><strong>[타임라인 편집기]</strong> 열기. 원하는 시점 왼쪽의 체크박스 선택.</p>
                 <ul class="crn-list">
-                    <li>누른 시점에 <strong>기준 시점</strong> 표시가 붙는다.</li>
-                    <li>같은 체크박스를 다시 누르면 해제된다.</li>
-                    <li>칸마다 있는 번역 버튼으로 외국어 칸을 한국어로 확인한다.</li>
-                    <li>입력 내용은 자동 저장된다. 저장 버튼은 없다.</li>
-                    <li>지운 시점과 칸은 <strong>[되돌리기]</strong>로 복구한다. 새로고침 전까지 최대 30개까지 유지된다.</li>
+                    <li>누른 시점에 <strong>기준 시점</strong> 표시 추가.</li>
+                    <li>같은 체크박스를 다시 누르면 해제.</li>
+                    <li>칸마다 있는 번역 버튼으로 외국어 칸의 한국어 확인 가능.</li>
+                    <li>입력 내용 자동 저장. 저장 버튼 없음.</li>
+                    <li>지운 시점과 칸은 <strong>[되돌리기]</strong>로 복구. 새로고침 전까지 최대 30개 유지.</li>
                 </ul>
             </div>
             <picture class="crn-shot">
@@ -670,10 +674,10 @@
             <div>
                 <span class="crn-step-no">3</span>
                 <h3>채팅에 연결</h3>
-                <p>패널의 <strong>이 채팅 → 세계관</strong>에서 세계관을 고른다. 연결 정보는 채팅 파일마다 따로 저장된다.</p>
+                <p>패널의 <strong>이 채팅 → 세계관</strong>에서 세계관 선택. 연결 정보는 채팅 파일마다 별도 저장.</p>
                 <ul class="crn-list">
-                    <li>같은 세계관으로 1991년 채팅과 1997년 채팅을 동시에 운용할 수 있다.</li>
-                    <li>상태 줄에 삽입 칸 수, 토큰 수, 미래 차단 칸 수, 과거 기록 칸 수가 표시된다.</li>
+                    <li>같은 세계관으로 1991년 채팅과 1997년 채팅 동시 운용 가능.</li>
+                    <li>상태 줄에 삽입 칸 수, 토큰 수, 미래 차단 칸 수, 과거 기록 칸 수 표시.</li>
                 </ul>
             </div>
             <div class="crn-status">
@@ -688,11 +692,11 @@
             <div>
                 <span class="crn-step-no">4</span>
                 <h3>삽입 결과 확인</h3>
-                <p><strong>[미리보기]</strong>로 실제로 모델에 전달되는 텍스트와 토큰 수를 확인한다.</p>
+                <p><strong>[미리보기]</strong>로 실제 모델 전달 텍스트와 토큰 수 확인.</p>
                 <ul class="crn-list">
-                    <li>예산 때문에 제외된 칸은 아래에 점수와 함께 표시된다.</li>
-                    <li>대체된 칸은 어떤 칸으로 대체되었는지와 함께 목록으로 표시된다.</li>
-                    <li><strong>[한국어로 보기]</strong>는 화면 표시만 번역한다.</li>
+                    <li>예산 때문에 제외된 칸은 하단에 점수와 함께 표시.</li>
+                    <li>대체된 칸은 대체한 칸의 날짜와 함께 목록으로 표시.</li>
+                    <li><strong>[한국어로 보기]</strong>는 화면 표시만 번역.</li>
                 </ul>
             </div>
             <picture class="crn-shot">
@@ -711,8 +715,8 @@
                 <h3>입력 방식</h3>
                 <div class="crn-table-wrap">
                     <table>
-                        <tr><th>텍스트 정리</th><td>메모, 위키 사본, 설정집 등 양식이 자유로운 글을 붙여넣거나 파일로 연다. 긴 글은 나누어 요청한다.</td></tr>
-                        <tr><th>작품 이름만</th><td>작품 이름을 입력한다. 시대 목차를 먼저 만든 뒤 시대별로 상세 기록을 생성한다.</td></tr>
+                        <tr><th>텍스트 정리</th><td>메모, 위키 사본, 설정집 등 양식이 자유로운 글을 붙여넣기 또는 파일로 열기. 긴 글은 분할 요청.</td></tr>
+                        <tr><th>작품 이름만</th><td>작품 이름 입력. 시대 목차 생성 후 시대별 상세 기록 생성.</td></tr>
                     </table>
                 </div>
                 <h3>실행 옵션</h3>
@@ -723,7 +727,7 @@
                     <li><strong>키워드 언어</strong> — 한국어 / English / 日本語 / 中文, 복수 선택</li>
                     <li><strong>추가 요구</strong> — 서술 시점, 범위 등을 자유롭게 지정</li>
                 </ul>
-                <p>기본 지시문은 중립적인 사실 기록만 요구한다. 문체와 관점은 추가 요구로 지정한다.</p>
+                <p>기본 지시문은 중립적인 사실 기록만 요구. 문체와 관점은 추가 요구로 지정 권장.</p>
             </div>
             <picture class="crn-shot">
                 <source media="(max-width: 560px)" srcset="https://raw.githubusercontent.com/kkangtonglove/ST-Chronicle/main/docs/img/m_ai_form.webp">
@@ -734,12 +738,12 @@
         <div class="crn-step">
             <div>
                 <h3>결과 확인 후 등록</h3>
-                <p>생성 결과는 바로 저장되지 않는다. 시점별 체크박스로 등록 대상을 고른 뒤 <strong>[등록하기]</strong>를 누른다.</p>
+                <p>생성 결과는 즉시 저장되지 않음. 시점별 체크박스로 등록 대상 선택 후 <strong>[등록하기]</strong> 선택.</p>
                 <div class="crn-table-wrap">
                     <table>
-                        <tr><th>새 시점</th><td>세계관에 없던 날짜. 시점이 새로 생성된다.</td></tr>
-                        <tr><th>추가</th><td>기존 시점에 칸이 추가된다.</td></tr>
-                        <tr><th>덮어씀</th><td>같은 시점에 같은 이름의 인물·관계 칸이 있어 새 내용으로 교체된다.</td></tr>
+                        <tr><th>새 시점</th><td>세계관에 없던 날짜. 시점 신규 생성.</td></tr>
+                        <tr><th>추가</th><td>기존 시점에 칸 추가.</td></tr>
+                        <tr><th>덮어씀</th><td>같은 시점에 같은 이름의 인물·관계 칸이 있어 새 내용으로 교체.</td></tr>
                     </table>
                 </div>
             </div>
@@ -754,12 +758,12 @@
                 <h3>연결 설정 (AI 탭)</h3>
                 <div class="crn-table-wrap">
                     <table>
-                        <tr><th>지금 연결된 API</th><td>롤플레이와 같은 연결을 사용한다.</td></tr>
-                        <tr><th>연결 프로필 (권장)</th><td>SillyTavern 연결 프로필을 지정한다. 제공자·모델·키가 프로필 기준으로 적용된다.</td></tr>
-                        <tr><th>직접 고르기</th><td>제공자, 모델 이름, 저장된 키를 직접 지정한다.</td></tr>
+                        <tr><th>지금 연결된 API</th><td>롤플레이와 같은 연결 사용.</td></tr>
+                        <tr><th>연결 프로필 (권장)</th><td>SillyTavern 연결 프로필 지정. 제공자·모델·키가 프로필 기준으로 적용.</td></tr>
+                        <tr><th>직접 고르기</th><td>제공자, 모델 이름, 저장된 키 직접 지정.</td></tr>
                     </table>
                 </div>
-                <p><strong>[연결 테스트]</strong>로 응답을 사전에 확인한다.</p>
+                <p><strong>[연결 테스트]</strong>로 응답 사전 확인 권장.</p>
             </div>
             <picture class="crn-shot is-narrow">
                 <img src="https://raw.githubusercontent.com/kkangtonglove/ST-Chronicle/main/docs/img/pc_aitab.webp" alt="AI 탭 연결 설정">
@@ -770,7 +774,7 @@
     <!-- ===================== 06 ===================== -->
     <section class="crn-sec">
         <div class="crn-sec-head"><span class="crn-num">06</span><h2>삽입 예시</h2></div>
-        <p>기준 시점 1995-06-24에서 모델에 전달되는 텍스트의 일부. 칸 이름은 항상 영어로 출력되고, 내용은 입력한 언어 그대로 출력된다.</p>
+        <p>기준 시점 1995-06-24에서 모델에 전달되는 텍스트의 일부. 칸 이름은 항상 영어, 내용은 입력한 언어 그대로 출력.</p>
 <pre><span class="k">&lt;chronicle current_time="1995-06-24"&gt;</span>
 <span class="m">The following is the established chronicle of this world, up to the current point in time (1995-06-24), listed in chronological order.
 Treat every entry as canon. Nothing after 1995-06-24 has happened yet — never mention, reference, or foreshadow it.
@@ -799,8 +803,8 @@ Entries marked PAST describe an earlier state of that character or relationship.
         <div class="crn-table-wrap">
             <table>
                 <tr><th>지원 환경</th><td>SillyTavern 1.14 이상 (1.19.0에서 검증), PC 및 모바일 브라우저</td></tr>
-                <tr><th>시점 형식</th><td><code>2015</code> · <code>2015-06</code> · <code>2015-06-30</code> · <code>-500</code>(기원전). 연·월 단위 시점은 그 기간 전체를 포함한다.</td></tr>
-                <tr><th>기간 형식</th><td><code>1970~1981</code> · <code>1991-09~1998-05</code> · <code>1991~</code>(진행 중). 기준 시점에 따라 ongoing / ended로 표시된다.</td></tr>
+                <tr><th>시점 형식</th><td><code>2015</code> · <code>2015-06</code> · <code>2015-06-30</code> · <code>-500</code>(기원전). 연·월 단위 시점은 그 기간 전체 포함.</td></tr>
+                <tr><th>기간 형식</th><td><code>1970~1981</code> · <code>1991-09~1998-05</code> · <code>1991~</code>(진행 중). 기준 시점에 따라 ongoing / ended 표시.</td></tr>
                 <tr><th>칸 옵션</th><td>항상(핀), 키워드, 고정 우선도(-100~100), 비밀(아는 인물), 대체, 사용 여부, 번역 보기</td></tr>
                 <tr><th>대체된 이전 칸</th><td>과거 기록으로 표시해서 삽입(기본) / 삽입하지 않음 — 설정 탭에서 선택</td></tr>
                 <tr><th>등장 인물 반영</th><td>끄기 / 등장 인물 우선(기본, +40점) / 등장 인물만 넣기 — 스토리·환경 칸은 영향 없음</td></tr>
@@ -820,14 +824,14 @@ Entries marked PAST describe an earlier state of that character or relationship.
     <section class="crn-sec">
         <div class="crn-sec-head"><span class="crn-num">08</span><h2>설치</h2></div>
         <ul class="crn-list">
-            <li>SillyTavern 확장 메뉴(블록 아이콘) → <strong>Install extension</strong>을 누른다.</li>
-            <li>아래 주소를 입력하고 설치한다.</li>
-            <li>확장 목록에 <strong>Chronicle</strong>이 표시되면 설치가 완료된 것이다.</li>
+            <li>SillyTavern 확장 메뉴(블록 아이콘) → <strong>Install extension</strong> 선택.</li>
+            <li>아래 주소 입력 후 설치.</li>
+            <li>확장 목록에 <strong>Chronicle</strong> 표시 시 설치 완료.</li>
         </ul>
         <div class="crn-install">
             <code>https://github.com/kkangtonglove/ST-Chronicle</code>
         </div>
-        <p style="margin-top:12px;">업데이트는 확장 관리 화면의 업데이트 버튼으로 수행한다.</p>
+        <p style="margin-top:12px;">업데이트는 확장 관리 화면의 업데이트 버튼 사용.</p>
     </section>
 
     <!-- ===================== 09 ===================== -->
@@ -835,24 +839,24 @@ Entries marked PAST describe an earlier state of that character or relationship.
         <div class="crn-sec-head"><span class="crn-num">09</span><h2>주의 사항</h2></div>
         <div class="crn-note" style="--c:var(--character)">
             <span class="crn-note-t">SECURITY</span>
-            <p>Chronicle은 API 키를 보관하지 않는다. 키는 SillyTavern의 비밀 저장소에서만 관리된다. 내보낸 JSON·텍스트 파일에는 키와 연결 설정이 포함되지 않는다.</p>
+            <p>Chronicle은 API 키를 보관하지 않음. 키는 SillyTavern 비밀 저장소에서만 관리. 내보낸 JSON·텍스트 파일에 키와 연결 설정 미포함.</p>
         </div>
         <div class="crn-note">
             <span class="crn-note-t">ACCURACY</span>
-            <p>"작품 이름만" 방식은 웹 검색이 아니라 모델이 학습한 지식으로 생성한다. 잘 알려지지 않은 작품은 사실과 다른 내용이 생성될 수 있다. 이 경우 자료를 직접 넣는 "텍스트 정리" 방식을 사용한다.</p>
+            <p>"작품 이름만" 방식은 웹 검색이 아닌 모델의 학습 지식으로 생성. 잘 알려지지 않은 작품은 사실과 다른 내용 생성 가능성 있음. 이 경우 자료를 직접 넣는 "텍스트 정리" 방식 권장.</p>
         </div>
         <div class="crn-note" style="--c:var(--environment)">
             <span class="crn-note-t">COST</span>
-            <p>AI 생성은 지정한 연결로 여러 번 요청한다. 유료 API는 요청 횟수만큼 요금이 발생한다. 자세함과 한 번에 보낼 글 길이로 요청 횟수를 조절한다.</p>
+            <p>AI 생성은 지정한 연결로 여러 번 요청. 유료 API는 요청 횟수만큼 요금 발생. 자세함과 한 번에 보낼 글 길이로 요청 횟수 조절 권장.</p>
         </div>
         <div class="crn-note" style="--c:var(--story)">
             <span class="crn-note-t">BUDGET</span>
-            <p>핀(항상) 칸의 합계가 토큰 예산을 넘으면 상태 줄과 미리보기에 경고가 표시된다. 예산을 늘리거나 일부 칸의 핀을 끈다. 과거 기록 방식은 이전 칸까지 삽입하므로 토큰 사용량이 늘어난다.</p>
+            <p>핀(항상) 칸의 합계가 토큰 예산 초과 시 상태 줄과 미리보기에 경고 표시. 예산 증액 또는 일부 칸의 핀 해제 권장. 과거 기록 방식은 이전 칸까지 삽입하므로 토큰 사용량 증가.</p>
         </div>
     </section>
 
     <footer class="crn-foot">
-        Chronicle · SillyTavern Extension · 예시 데이터는 해리포터 세계관을 요약한 팬 기록이다.
+        Chronicle · SillyTavern Extension · 예시 데이터: 해리포터 세계관 요약 팬 기록.
     </footer>
 
 </article>
