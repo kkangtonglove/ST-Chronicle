@@ -1,0 +1,240 @@
+<div id="chronicle_settings">
+    <div class="inline-drawer">
+        <div class="inline-drawer-toggle inline-drawer-header">
+            <b>Chronicle</b>
+            <div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div>
+        </div>
+        <div class="inline-drawer-content">
+
+            <label class="checkbox_label" for="chronicle_enabled">
+                <input id="chronicle_enabled" type="checkbox">
+                <span>ON</span>
+            </label>
+
+            <!-- ===== tabs ===== -->
+            <div class="chr-tabs">
+                <div class="chr-tab chr-active" data-tab="timeline">
+                    <i class="fa-solid fa-timeline"></i> 타임라인
+                </div>
+                <div class="chr-tab" data-tab="ai">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> AI
+                </div>
+                <div class="chr-tab" data-tab="settings">
+                    <i class="fa-solid fa-sliders"></i> 설정
+                </div>
+            </div>
+
+            <!-- ===================== timeline ===================== -->
+            <div class="chr-pane chr-active" data-pane="timeline">
+
+                <div class="chr-sec">세계관</div>
+                <div class="chr-row">
+                    <select id="chronicle_world_select" class="text_pole"></select>
+                </div>
+                <div class="chr-btnrow">
+                    <div id="chronicle_world_new" class="menu_button" title="새 세계관 만들기"><i class="fa-solid fa-plus"></i><span>새로</span></div>
+                    <div id="chronicle_world_rename" class="menu_button" title="이름 바꾸기"><i class="fa-solid fa-pen"></i><span>이름</span></div>
+                    <div id="chronicle_world_dup" class="menu_button" title="복제"><i class="fa-solid fa-copy"></i><span>복제</span></div>
+                    <div id="chronicle_world_del" class="menu_button" title="삭제"><i class="fa-solid fa-trash-can"></i><span>삭제</span></div>
+                </div>
+                <div class="chr-btnrow">
+                    <div id="chronicle_export" class="menu_button" title="JSON 또는 텍스트 파일로 내보내기"><i class="fa-solid fa-file-export"></i><span>내보내기</span></div>
+                    <div id="chronicle_import" class="menu_button" title="JSON 또는 텍스트(.txt) 파일 불러오기"><i class="fa-solid fa-file-import"></i><span>불러오기</span></div>
+                    <input id="chronicle_import_file" type="file" accept=".json,.txt,.md" hidden>
+                </div>
+
+                <div id="chronicle_open_editor" class="menu_button chr-wide chr-primary">
+                    <i class="fa-solid fa-timeline"></i> 타임라인 편집기
+                </div>
+                <div id="chronicle_open_ai" class="menu_button chr-wide">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> AI로 연대기 만들기
+                </div>
+
+                <hr>
+
+                <div class="chr-sec">이 채팅</div>
+                <div class="chr-row">
+                    <span class="chr-key">세계관</span>
+                    <select id="chronicle_chat_world" class="text_pole"></select>
+                </div>
+                <div class="chr-row">
+                    <span class="chr-key">기준 시점</span>
+                    <span id="chronicle_now_display" class="chr-now">제한 없음</span>
+                    <div id="chronicle_now_clear" class="chr-ico" title="기준 시점 해제"><i class="fa-solid fa-xmark"></i></div>
+                </div>
+                <small class="chr-hint">기준 시점은 <b>타임라인 편집기에서 체크</b>로 정합니다.</small>
+
+                <div id="chronicle_status"></div>
+
+                <div id="chronicle_preview" class="menu_button chr-wide">
+                    <i class="fa-solid fa-eye"></i> 미리보기
+                </div>
+
+            </div>
+
+            <!-- ===================== AI ===================== -->
+            <div class="chr-pane" data-pane="ai">
+
+                <div class="chr-sec">연결 방식</div>
+                <select id="chronicle_ai_mode" class="text_pole">
+                    <option value="current">지금 연결된 API 그대로</option>
+                    <option value="profile">연결 프로필 고르기 (추천)</option>
+                    <option value="direct">직접 고르기</option>
+                </select>
+                <small class="chr-hint">롤플레이에 쓰는 연결은 바뀌지 않습니다. 연대기를 만들 때만 여기서 고른 연결로 요청합니다.</small>
+
+                <div id="chronicle_ai_pane_profile">
+                    <div class="chr-sec">연결 프로필</div>
+                    <div class="chr-row">
+                        <select id="chronicle_ai_profile" class="text_pole"></select>
+                        <div id="chronicle_ai_refresh" class="chr-ico" title="목록 새로고침"><i class="fa-solid fa-rotate"></i></div>
+                    </div>
+                    <small id="chronicle_ai_profile_empty" class="chr-hint">저장된 프로필이 없습니다. 실리태번 API 연결 화면 위쪽의 <b>연결 프로필</b>에서 만들어 주세요. 프로필에 회사·모델·키가 함께 저장됩니다.</small>
+                </div>
+
+                <div id="chronicle_ai_pane_direct">
+                    <div class="chr-sec">회사</div>
+                    <select id="chronicle_ai_source" class="text_pole">
+                        <option value="openai">OpenAI</option>
+                        <option value="claude">Claude</option>
+                        <option value="makersuite">Gemini (Google AI Studio)</option>
+                        <option value="vertexai">Gemini Vertex AI</option>
+                        <option value="deepseek">DeepSeek</option>
+                        <option value="zai">GLM (Z.AI)</option>
+                        <option value="custom">기타 (OpenAI 호환)</option>
+                    </select>
+
+                    <div id="chronicle_ai_row_vertex">
+                        <div class="chr-sec">Vertex 인증</div>
+                        <select id="chronicle_ai_vertex_auth" class="text_pole">
+                            <option value="express">Express 모드 (API 키)</option>
+                            <option value="full">서비스 계정 (JSON 키)</option>
+                        </select>
+                        <div class="chr-sec">리전</div>
+                        <input id="chronicle_ai_vertex_region" type="text" class="text_pole" placeholder="us-central1 / global">
+                        <small id="chronicle_ai_vertex_note" class="chr-hint">서비스 계정 JSON은 실리태번에서 <b>현재 활성인 JSON</b>이 쓰입니다. JSON 파일은 실리태번 API 연결 화면(Vertex AI → 서비스 계정)에 먼저 넣어 주세요.</small>
+                    </div>
+
+                    <div id="chronicle_ai_row_zai">
+                        <div class="chr-sec">Z.AI 엔드포인트</div>
+                        <select id="chronicle_ai_zai_endpoint" class="text_pole">
+                            <option value="common">일반 (Common)</option>
+                            <option value="coding">코딩 플랜 (Coding)</option>
+                        </select>
+                    </div>
+
+                    <div id="chronicle_ai_row_custom">
+                        <div class="chr-sec">주소 (URL)</div>
+                        <input id="chronicle_ai_custom_url" type="text" class="text_pole" placeholder="https://example.com/v1">
+                    </div>
+
+                    <div class="chr-sec">모델 이름</div>
+                    <input id="chronicle_ai_model" type="text" class="text_pole" placeholder="모델 ID를 그대로 입력">
+
+                    <div class="chr-sec">API 키</div>
+                    <select id="chronicle_ai_secret" class="text_pole"></select>
+                    <small class="chr-hint">키는 실리태번 API 연결 화면에 저장된 것 중에서 고릅니다. 크로니클은 키를 따로 보관하지 않습니다.</small>
+                </div>
+
+                <div class="chr-sec">응답 최대 길이 (토큰)</div>
+                <input id="chronicle_ai_maxtokens" type="number" class="text_pole" min="256" max="200000" step="256">
+
+                <div class="chr-sec">한 번에 보낼 글 길이 (글자)</div>
+                <input id="chronicle_ai_chunk" type="number" class="text_pole" min="2000" max="200000" step="1000">
+                <small class="chr-hint">긴 글은 이 길이로 나눠서 여러 번 요청합니다.</small>
+
+                <div class="chr-btnrow chr-mt">
+                    <div id="chronicle_ai_test" class="menu_button"><i class="fa-solid fa-plug-circle-check"></i><span>연결 테스트</span></div>
+                </div>
+                <div id="chronicle_ai_test_result" class="chr-hint"></div>
+
+                <hr>
+
+                <div class="chr-sec">기본 지시 (영문)</div>
+                <textarea id="chronicle_ai_system" class="text_pole textarea_compact" rows="5" spellcheck="false"></textarea>
+                <small class="chr-hint">AI에게 주는 기본 역할입니다. 중립적인 기록만 부탁하도록 되어 있습니다. 시점이나 문체는 만들 때마다 <b>추가 요구</b> 칸에 적으세요. 출력 형식 규칙은 따로 자동으로 붙습니다.</small>
+                <div class="chr-btnrow">
+                    <div id="chronicle_ai_system_reset" class="menu_button"><i class="fa-solid fa-rotate-left"></i><span>기본 지시 복원</span></div>
+                </div>
+
+            </div>
+
+            <!-- ===================== settings ===================== -->
+            <div class="chr-pane" data-pane="settings">
+
+                <div class="chr-sec">토큰 예산</div>
+                <input id="chronicle_budget" type="number" class="text_pole" min="100" max="60000" step="100">
+                <small class="chr-hint">연대기가 차지할 최대 토큰. 넘치면 점수가 낮은(오래된) 것부터 잘립니다.</small>
+
+                <div class="chr-sec">최신 우선 가중치</div>
+                <div class="chr-slider">
+                    <input id="chronicle_recency" type="range" min="0" max="200" step="5">
+                    <span id="chronicle_recency_val" class="chr-val"></span>
+                </div>
+                <small class="chr-hint">클수록 기준 시점에 가까운 최신 항목이 강하게 살아남습니다.</small>
+
+                <div class="chr-sec">핀(항상 삽입) 보너스</div>
+                <div class="chr-slider">
+                    <input id="chronicle_constbonus" type="range" min="0" max="300" step="5">
+                    <span id="chronicle_constbonus_val" class="chr-val"></span>
+                </div>
+
+                <div class="chr-sec">키워드 적중 보너스</div>
+                <div class="chr-slider">
+                    <input id="chronicle_keybonus" type="range" min="0" max="300" step="5">
+                    <span id="chronicle_keybonus_val" class="chr-val"></span>
+                </div>
+
+                <div class="chr-sec">키워드 스캔 깊이</div>
+                <input id="chronicle_scandepth" type="number" class="text_pole" min="1" max="50" step="1">
+                <small class="chr-hint">최근 몇 개의 메시지에서 키워드를 찾을지.</small>
+
+                <hr>
+
+                <div class="chr-sec">삽입 위치</div>
+                <select id="chronicle_position" class="text_pole">
+                    <option value="before">프롬프트 맨 앞</option>
+                    <option value="after">캐릭터 정의 뒤</option>
+                    <option value="chat">대화 속 지정 깊이</option>
+                </select>
+
+                <div class="chr-sec">삽입 깊이</div>
+                <input id="chronicle_depth" type="number" class="text_pole" min="0" max="100" step="1">
+                <small class="chr-hint">'대화 속 지정 깊이' 일 때만 사용.</small>
+
+                <div class="chr-sec">역할</div>
+                <select id="chronicle_role" class="text_pole">
+                    <option value="0">System</option>
+                    <option value="1">User</option>
+                    <option value="2">Assistant</option>
+                </select>
+
+                <div class="chr-sec">라벨 언어</div>
+                <select id="chronicle_labelmode" class="text_pole">
+                    <option value="en">영어만 — Story:</option>
+                    <option value="ko">한국어만 — 스토리:</option>
+                    <option value="both">병기 — Story(스토리):</option>
+                </select>
+                <small class="chr-hint">프롬프트에 들어가는 칸 이름입니다. 내용은 쓴 그대로 들어갑니다.</small>
+
+                <hr>
+
+                <div class="chr-sec">지시문</div>
+                <textarea id="chronicle_header" class="text_pole textarea_compact" rows="4" spellcheck="false"></textarea>
+                <small class="chr-hint"><code>{{now}}</code> 는 기준 시점으로 바뀝니다. 비밀 칸이 들어갈 때는 비밀 안내 문장이 자동으로 붙습니다.</small>
+
+                <label class="checkbox_label" for="chronicle_debug">
+                    <input id="chronicle_debug" type="checkbox">
+                    <span>디버그 로그 (F12 콘솔)</span>
+                </label>
+
+                <div class="chr-btnrow chr-mt">
+                    <div id="chronicle_header_reset" class="menu_button" title="지시문만 기본 영문으로"><i class="fa-solid fa-language"></i><span>지시문 복원</span></div>
+                    <div id="chronicle_reset" class="menu_button" title="설정 전체를 기본값으로"><i class="fa-solid fa-rotate-left"></i><span>전체 초기화</span></div>
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+</div>
