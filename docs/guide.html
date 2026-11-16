@@ -516,7 +516,7 @@
         <h1>Chronicle</h1>
         <p class="crn-sub">시간축 세계관 확장 · 사용 설명서</p>
         <div class="crn-chips">
-            <span class="crn-chip">버전 <b>3.2.1</b></span>
+            <span class="crn-chip">버전 <b>3.3.0</b></span>
             <span class="crn-chip">대상 <b>SillyTavern 1.14 이상</b></span>
             <span class="crn-chip">PC · 모바일 <b>지원</b></span>
             <span class="crn-chip">라이선스 <b>무료</b></span>
@@ -588,7 +588,7 @@
             <div class="crn-card">
                 <span class="crn-tag">SECRET · REPLACE</span>
                 <h3>비밀 칸과 대체 칸</h3>
-                <p>비밀 칸은 아는 인물을 함께 기록하며, 모르는 인물이 언급하지 않도록 안내문이 자동으로 붙는다. 대체 칸은 같은 이름의 이전 칸을 삽입에서 제외한다.</p>
+                <p>비밀 칸은 아는 인물을 함께 기록하며, 모르는 인물이 언급하지 않도록 안내문이 자동으로 붙는다. 대체 칸은 그 인물의 현재 상태가 되고, 같은 이름의 이전 칸은 과거 기록(PAST)으로 표시되어 변화 과정이 유지된다.</p>
             </div>
             <div class="crn-card">
                 <span class="crn-tag">AI BUILDER</span>
@@ -659,13 +659,13 @@
                 <p>패널의 <strong>이 채팅 → 세계관</strong>에서 세계관을 고른다. 연결 정보는 채팅 파일마다 따로 저장된다.</p>
                 <ul class="crn-list">
                     <li>같은 세계관으로 1991년 채팅과 1997년 채팅을 동시에 운용할 수 있다.</li>
-                    <li>상태 줄에 삽입 칸 수, 토큰 수, 차단·대체 칸 수가 표시된다.</li>
+                    <li>상태 줄에 삽입 칸 수, 토큰 수, 미래 차단 칸 수, 과거 기록 칸 수가 표시된다.</li>
                 </ul>
             </div>
             <div class="crn-status">
                 <div class="crn-status-row"><span>이 채팅 · 세계관</span><b>해리포터 · 120시점</b></div>
                 <div class="crn-status-row"><span>기준 시점</span><b class="is-amber">1995-06-24</b></div>
-                <div class="crn-status-line">삽입 91 · 8987 토큰 &nbsp;|&nbsp; 미래 차단 47 &nbsp;|&nbsp; 대체됨 62</div>
+                <div class="crn-status-line">삽입 103 · 10327 토큰 &nbsp;|&nbsp; 미래 차단 47 &nbsp;|&nbsp; 과거 기록 62</div>
                 <div class="crn-status-cap">상태 줄 표시 예</div>
             </div>
         </div>
@@ -677,6 +677,7 @@
                 <p><strong>[미리보기]</strong>로 실제로 모델에 전달되는 텍스트와 토큰 수를 확인한다.</p>
                 <ul class="crn-list">
                     <li>예산 때문에 제외된 칸은 아래에 점수와 함께 표시된다.</li>
+                    <li>대체된 칸은 어떤 칸으로 대체되었는지와 함께 목록으로 표시된다.</li>
                     <li><strong>[한국어로 보기]</strong>는 화면 표시만 번역한다.</li>
                 </ul>
             </div>
@@ -759,11 +760,15 @@
 <pre><span class="k">&lt;chronicle current_time="1995-06-24"&gt;</span>
 <span class="m">The following is the established chronicle of this world, up to the current point in time (1995-06-24), listed in chronological order.
 Treat every entry as canon. Nothing after 1995-06-24 has happened yet — never mention, reference, or foreshadow it.
-Entries marked SECRET are true, but hidden. …</span>
+Entries marked SECRET are true, but hidden. …
+Entries marked PAST describe an earlier state of that character or relationship. …</span>
 
 <span class="k">[1991-09-01]</span>
 <span class="s">Story:</span> Harry Potter, Ron Weasley, Hermione Granger and Neville Longbottom are sorted into Gryffindor; Draco Malfoy into Slytherin.
 <span class="c">Character (Quirinus Quirrell)</span> <span class="x">[SECRET]</span><span class="c">:</span> The Defence Against the Dark Arts teacher shares his body with Voldemort's spirit.
+
+<span class="k">[1980]</span>
+<span class="c">Character (Severus Snape)</span> <span class="m">[PAST, superseded on 1995-06-24]</span><span class="c">:</span> Snape becomes Dumbledore's spy inside the Death Eaters.
 
 <span class="k">[1995-06-24]</span>
 <span class="s">Story:</span> Voldemort regains a body in a ritual using Harry's blood. Pettigrew kills Cedric Diggory.
@@ -779,6 +784,7 @@ Entries marked SECRET are true, but hidden. …</span>
                 <tr><th>지원 환경</th><td>SillyTavern 1.14 이상 (1.19.0에서 검증), PC 및 모바일 브라우저</td></tr>
                 <tr><th>시점 형식</th><td><code>2015</code> · <code>2015-06</code> · <code>2015-06-30</code> · <code>-500</code>(기원전). 연·월 단위 시점은 그 기간 전체를 포함한다.</td></tr>
                 <tr><th>칸 옵션</th><td>항상(핀), 키워드, 고정 우선도(-100~100), 비밀(아는 인물), 대체, 사용 여부, 번역 보기</td></tr>
+                <tr><th>대체된 이전 칸</th><td>과거 기록으로 표시해서 삽입(기본) / 삽입하지 않음 — 설정 탭에서 선택</td></tr>
                 <tr><th>키워드 판정</th><td>영어: 단어 단위 · 한글 1~2자: 단어 첫머리 · 일본어·중국어 및 한글 3자 이상: 포함 여부 · <code>/정규식/</code></td></tr>
                 <tr><th>삽입 위치</th><td>프롬프트 맨 앞 / 캐릭터 정의 뒤 / 대화 속 지정 깊이. 역할: System · User · Assistant</td></tr>
                 <tr><th>기본 예산</th><td>1,500 토큰 (최신 가중치 60 · 핀 보너스 40 · 키워드 보너스 30 · 스캔 깊이 4)</td></tr>
@@ -821,7 +827,7 @@ Entries marked SECRET are true, but hidden. …</span>
         </div>
         <div class="crn-note" style="--c:var(--story)">
             <span class="crn-note-t">BUDGET</span>
-            <p>핀(항상) 칸의 합계가 토큰 예산을 넘으면 상태 줄과 미리보기에 경고가 표시된다. 예산을 늘리거나 일부 칸의 핀을 끈다.</p>
+            <p>핀(항상) 칸의 합계가 토큰 예산을 넘으면 상태 줄과 미리보기에 경고가 표시된다. 예산을 늘리거나 일부 칸의 핀을 끈다. 과거 기록 방식은 이전 칸까지 삽입하므로 토큰 사용량이 늘어난다.</p>
         </div>
     </section>
 

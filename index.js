@@ -68,6 +68,11 @@ const SECRET_NOTE =
     'Entries marked SECRET are true, but hidden. Only the characters listed after "known only to" know them. ' +
     'Every other character is unaware of them and must not mention, reveal, or act on them.';
 
+/** Appended automatically when superseded entries are kept as history. */
+const PAST_NOTE =
+    'Entries marked PAST describe an earlier state of that character or relationship. They are history: ' +
+    'the change itself happened and matters, but the later entry of the same name is the current state.';
+
 const DEFAULT_AI_SYSTEM =
     'You compile a chronicle: a chronological record of a world (fictional or real) that will be used as background reference for roleplay. ' +
     'Record what happens in the world and the state of its people, relationships and setting at each point in time. ' +
@@ -123,6 +128,7 @@ const DEFAULT_SETTINGS = {
     position: 'before',
     depth: 4,
     role: 0,
+    replacedMode: 'past',     // past = keep earlier entries marked PAST | drop = leave them out
 
     header: DEFAULT_HEADER,
     debug: false,
@@ -132,7 +138,7 @@ const DEFAULT_SETTINGS = {
 
 const ADVANCED_KEYS = [
     'tokenBudget', 'recencyWeight', 'constantBonus', 'keywordBonus', 'scanDepth',
-    'position', 'depth', 'role', 'header',
+    'position', 'depth', 'role', 'header', 'replacedMode',
 ];
 
 // ==================================================================
@@ -497,11 +503,12 @@ function hasKeywordHit(block, scanText) {
     return keys.some(k => keywordMatches(String(k), scanText));
 }
 
-/** One prompt line (labels are always English) */
-function renderBlockLine(block) {
+/** One prompt line (labels are always English). pastBy = date of the entry that supersedes it. */
+function renderBlockLine(block, pastBy = '') {
     const t = BLOCK_TYPES[block.type] ?? BLOCK_TYPES.story;
     let label = t.en;
     if (t.named && block.name) label += ` (${block.name})`;
+    if (pastBy) label += ` [PAST, superseded on ${pastBy}]`;
     if (block.secret) label += block.knownBy ? ` [SECRET, known only to: ${block.knownBy}]` : ' [SECRET]';
     return `${label}: ${String(block.content).trim()}`;
 }
@@ -539,7 +546,7 @@ async function buildPacket() {
     const s = getSettings();
     const world = getActiveWorld();
     const conf = getChatConf();
-    const base = { text: '', used: [], dropped: [], excluded: 0, replaced: 0, tokens: 0, pinnedTokens: 0, world, now: conf.now };
+    const base = { text: '', used: [], dropped: [], excluded: 0, replaced: 0, replacedList: [], replacedMode: s.replacedMode, tokens: 0, pinnedTokens: 0, world, now: conf.now };
 
     if (!s.enabled || !world) return base;
 
@@ -558,22 +565,31 @@ async function buildPacket() {
         for (const b of live) candidates.push({ node, block: b.constant === undefined ? { ...b, constant: true } : b, key });
     }
 
-    // 2) "replaces earlier": drop older entries of the same person/pair
-    const latestReplace = new Map();
+    // 2) "replaces earlier": older entries of the same person/pair are superseded.
+    //    past mode → kept, marked PAST (the history of the change still matters)
+    //    drop mode → left out
+    const latestReplace = new Map(); // nameKey → { key, date }
     for (const c of candidates) {
         if (!c.block.replaces || !c.block.name) continue; // replaces only exists on named types
         const nk = nameKey(c.block);
-        if (!latestReplace.has(nk) || latestReplace.get(nk) < c.key) latestReplace.set(nk, c.key);
+        const cur = latestReplace.get(nk);
+        if (!cur || cur.key < c.key) latestReplace.set(nk, { key: c.key, date: formatDate(c.node.date) });
     }
-    let replaced = 0;
+    const replacedList = [];
+    const dropReplaced = s.replacedMode === 'drop';
     if (latestReplace.size) {
         candidates = candidates.filter(c => {
-            const lim = latestReplace.get(nameKey(c.block));
-            if (lim !== undefined && c.block.name && c.key < lim) { replaced++; return false; }
+            const lim = c.block.name ? latestReplace.get(nameKey(c.block)) : undefined;
+            if (!lim || c.key >= lim.key) return true;
+            replacedList.push({ node: c.node, block: c.block, key: c.key, by: lim.date });
+            if (dropReplaced) return false;
+            c.pastBy = lim.date;
             return true;
         });
     }
-    if (!candidates.length) return { ...base, excluded, replaced };
+    const replaced = replacedList.length;
+    const rbase = { ...base, excluded, replaced, replacedList };
+    if (!candidates.length) return rbase;
 
     // 3) inclusion (pinned or keyword hit)
     const scanText = getScanText(s.scanDepth);
@@ -583,7 +599,7 @@ async function buildPacket() {
         if (!c.block.constant && !hit) continue;
         picked.push({ ...c, hit });
     }
-    if (!picked.length) return { ...base, excluded, replaced };
+    if (!picked.length) return rbase;
 
     // 4) score — recency by rank (position in the timeline), not by date distance
     const ranks = [...new Set(picked.map(p => p.key))].sort((a, b) => a - b);
@@ -600,12 +616,11 @@ async function buildPacket() {
     // 5) fill the budget by score — the header is part of the budget too
     const nowLabel = conf.now ? formatDate(conf.now) : 'unrestricted';
     const baseHeader = String(s.header || '').replaceAll('{{now}}', nowLabel).trim();
-    const makeHead = (withSecret) => {
-        const h = withSecret ? (baseHeader ? baseHeader + '\n' : '') + SECRET_NOTE : baseHeader;
+    const makeHead = (withSecret, withPast) => {
+        const h = [baseHeader, withSecret ? SECRET_NOTE : '', withPast ? PAST_NOTE : ''].filter(Boolean).join('\n');
         return `<chronicle current_time="${esc(nowLabel)}">\n` + (h ? h + '\n\n' : '');
     };
-    const anySecret = picked.some(p => p.block.secret);
-    const reserve = await countTokens(makeHead(anySecret) + '\n</chronicle>');
+    const reserve = await countTokens(makeHead(picked.some(p => p.block.secret), picked.some(p => p.pastBy)) + '\n</chronicle>');
     const budget = Math.max(0, Number(s.tokenBudget || 0) - reserve);
     const byScore = [...picked].sort((a, b) => (b.score - a.score) || (b.key - a.key));
     const used = [], dropped = [];
@@ -614,7 +629,7 @@ async function buildPacket() {
     const pinnedNodes = new Set();
 
     for (const p of byScore) {
-        p.line = renderBlockLine(p.block);
+        p.line = renderBlockLine(p.block, p.pastBy);
         const nodeCost = seenNodes.has(p.node.id) ? 0 : 6;
         // Only run the real tokenizer when the line could still fit; a cheap
         // lower-bound estimate rules out the rest (big speed-up on large worlds).
@@ -629,7 +644,7 @@ async function buildPacket() {
         seenNodes.add(p.node.id);
         used.push(p);
     }
-    if (!used.length) return { ...base, excluded, replaced, dropped, pinnedTokens };
+    if (!used.length) return { ...rbase, dropped, pinnedTokens };
 
     // 6) output in chronological order, grouped by node
     used.sort((a, b) => (a.key - b.key)
@@ -642,13 +657,13 @@ async function buildPacket() {
         g.lines.push(p.line);
     }
 
-    const head = makeHead(used.some(p => p.block.secret));
+    const head = makeHead(used.some(p => p.block.secret), used.some(p => p.pastBy));
     const body = groups.map(g => `[${formatDate(g.node.date)}]\n${g.lines.join('\n')}`).join('\n\n');
     const text = head + body + '\n</chronicle>';
 
     // header + per-line costs already counted (cached), so no second pass over the whole text
     const tokens = total + await countTokens(head + '\n</chronicle>');
-    return { text, used, dropped, excluded, replaced, tokens, pinnedTokens, world, now: conf.now };
+    return { ...rbase, text, used, dropped, tokens, pinnedTokens };
 }
 
 // ==================================================================
@@ -1217,6 +1232,7 @@ function refreshPanel() {
     $('#chronicle_position').val(s.position);
     $('#chronicle_depth').val(s.depth);
     $('#chronicle_role').val(String(s.role));
+    $('#chronicle_replacedmode').val(s.replacedMode);
     $('#chronicle_header').val(s.header);
     $('#chronicle_debug').prop('checked', !!s.debug);
 
@@ -1231,7 +1247,7 @@ function renderStatus(packet) {
     if (!packet || !packet.world) { $el.text('이 채팅에 연결된 세계관이 없습니다.'); return; }
     const parts = [`삽입 ${packet.used.length} · ${packet.tokens} 토큰`];
     if (packet.excluded) parts.push(`미래 차단 ${packet.excluded}`);
-    if (packet.replaced) parts.push(`대체됨 ${packet.replaced}`);
+    if (packet.replaced) parts.push(packet.replacedMode === 'drop' ? `대체로 제외 ${packet.replaced}` : `과거 기록 ${packet.replaced}`);
     if (packet.dropped?.length) parts.push(`예산 초과 ${packet.dropped.length}`);
     let text = parts.join('  |  ');
     const budget = Number(getSettings().tokenBudget || 0);
@@ -1425,6 +1441,9 @@ function bindPanel() {
     $('#chronicle_role').on('change', function () {
         getSettings().role = Number($(this).val()); saveSettings(); updateInjection();
     });
+    $('#chronicle_replacedmode').on('change', function () {
+        getSettings().replacedMode = String($(this).val()); saveSettings(); updateInjection();
+    });
     $('#chronicle_header').on('input', function () {
         getSettings().header = String($(this).val()); saveSoon(); updateSoon();
     });
@@ -1500,7 +1519,7 @@ async function openPreview() {
             ${stat('삽입', packet.used.length + '개')}
             ${stat('토큰', `${packet.tokens} / ${s.tokenBudget}`)}
             ${stat('미래 차단', packet.excluded + '개')}
-            ${packet.replaced ? stat('대체됨', packet.replaced + '개') : ''}
+            ${packet.replaced ? stat(packet.replacedMode === 'drop' ? '대체로 제외' : '과거 기록', packet.replaced + '개') : ''}
         </div>
         ${over ? `<div class="chr-warnbar"><i class="fa-solid fa-triangle-exclamation"></i>핀(항상) 글만 약 ${packet.pinnedTokens} 토큰으로 예산을 넘습니다.</div>` : ''}
         <div class="chr-preview-tools">
@@ -1513,7 +1532,16 @@ async function openPreview() {
             packet.dropped.sort((a, b) => b.score - a.score).map(p =>
                 `· [${esc(formatDate(p.node.date))}] ${esc(BLOCK_TYPES[p.block.type].ko)}` +
                 `${p.block.name ? ' · ' + esc(p.block.name) : ''} — 점수 ${Math.round(p.score)}`).join('<br>') +
-            '</div>' : ''}`;
+            '</div>' : ''}
+        ${packet.replacedList?.length ? (() => {
+            const drop = packet.replacedMode === 'drop';
+            const usedIds = new Set(packet.used.map(p => p.block.id));
+            const rows = [...packet.replacedList].sort((a, b) => a.key - b.key).map(r => {
+                const state = drop ? '제외됨' : (usedIds.has(r.block.id) ? '과거 기록으로 들어감' : '조건·예산 때문에 빠짐');
+                return `· [${esc(formatDate(r.node.date))}] ${esc(BLOCK_TYPES[r.block.type].ko)} · ${esc(r.block.name)} → ${esc(r.by)} 칸으로 대체 <span class="chr-dim">(${state})</span>`;
+            });
+            return `<div class="chr-dropped chr-replaced"><b>${drop ? '대체되어 제외된 칸' : '대체되어 과거 기록으로 표시된 칸'} (${rows.length}개)</b><br>${rows.join('<br>')}</div>`;
+        })() : ''}`;
 
     const $el = $(el);
     let trDone = false, showingTr = false;
@@ -2199,7 +2227,7 @@ function renderOneBlock(b) {
                 <input type="text" class="text_pole chr-keys ${shortKey ? 'chr-warnkey' : ''}" value="${esc(b.keys.join(', '))}" placeholder="키워드 (쉼표로 구분)" title="한 글자 키워드는 엉뚱한 단어에 걸리기 쉽습니다">
                 <input type="number" class="text_pole chr-pri" value="${b.priority}" min="-100" max="100" step="5" title="고정 우선도">
                 <div class="chr-ico chr-tog ${b.secret ? 'chr-on' : ''}" data-act="secret" title="비밀 — 사실이지만 대부분의 인물이 모름"><i class="fa-solid fa-user-secret"></i></div>
-                ${t.named ? `<div class="chr-ico chr-tog ${b.replaces ? 'chr-on' : ''}" data-act="replaces" title="이전 칸 대체 — 켜면 같은 이름의 더 이전 칸은 넣지 않음"><i class="fa-solid fa-arrows-rotate"></i></div>` : ''}
+                ${t.named ? `<div class="chr-ico chr-tog ${b.replaces ? 'chr-on' : ''}" data-act="replaces" title="이전 칸 대체 — 켜면 같은 이름의 더 이전 칸은 과거 기록으로 표시됨 (설정에서 제외로 바꿀 수 있음)"><i class="fa-solid fa-arrows-rotate"></i></div>` : ''}
                 <div class="chr-ico chr-tog ${_trBlocks.has(b.id) ? 'chr-on' : ''}" data-act="block-tr" title="이 칸만 한국어로 보기 (보기 전용)"><i class="fa-solid fa-language"></i></div>
                 <div class="chr-ico" data-act="block-toggle" title="${b.enabled ? '사용 중 (누르면 끔)' : '꺼짐 (누르면 켬)'}">
                     <i class="fa-solid ${b.enabled ? 'fa-eye' : 'fa-eye-slash'}"></i>

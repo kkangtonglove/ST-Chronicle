@@ -1456,3 +1456,6 @@
 .chr-editor [hidden] {
     display: none !important;
 }
+
+.chr-dropped .chr-dim { opacity: 0.6; }
+.chr-replaced { border-top: 1px solid var(--SmartThemeBorderColor); padding-top: 8px; }
