@@ -131,6 +131,8 @@ const DEFAULT_SETTINGS = {
     replacedMode: 'past',     // past = keep earlier entries marked PAST | drop = leave them out
     castMode: 'boost',        // off | boost (raise present characters) | filter (only present characters)
     castBonus: 40,
+    compressOld: false,       // older points → first sentence only
+    compressKeep: 12,         // how many most recent points stay in full
 
     header: DEFAULT_HEADER,
     debug: false,
@@ -140,7 +142,7 @@ const DEFAULT_SETTINGS = {
 
 const ADVANCED_KEYS = [
     'tokenBudget', 'recencyWeight', 'constantBonus', 'keywordBonus', 'scanDepth',
-    'position', 'depth', 'role', 'header', 'replacedMode', 'castMode', 'castBonus',
+    'position', 'depth', 'role', 'header', 'replacedMode', 'castMode', 'castBonus', 'compressOld', 'compressKeep',
 ];
 
 // ==================================================================
@@ -409,16 +411,43 @@ function normalizeBlock(b) {
     return out;
 }
 
+const NODE_MODES = ['auto', 'pin', 'key']; // per-entry / everything always / everything by keyword
+
 function normalizeNode(n) {
     return {
         id: n?.id || uid(),
         date: String(n?.date ?? '').trim(),
+        mode: NODE_MODES.includes(n?.mode) ? n.mode : 'auto',
+        enabled: n?.enabled !== false,
         blocks: (Array.isArray(n?.blocks) ? n.blocks : []).map(normalizeBlock),
     };
 }
 
 function makeNode(date = '') {
-    return { id: uid(), date: String(date), blocks: [] };
+    return { id: uid(), date: String(date), mode: 'auto', enabled: true, blocks: [] };
+}
+
+/** "Always" state of an entry after the point-level setting is applied */
+function effConst(node, b) {
+    if (node?.mode === 'pin') return true;
+    if (node?.mode === 'key') return false;
+    return b.constant !== false;
+}
+
+/** Entries that can never be inserted (not always + no keywords) */
+function deadBlocks(node) {
+    return (node.blocks || []).filter(b => b.enabled !== false && !effConst(node, b) && !(b.keys || []).length);
+}
+
+/** First sentence (≥ 20 chars, so "Mr." etc. do not cut it short) */
+function firstSentence(text) {
+    const t = String(text ?? '').trim();
+    const re = /[.!?。！？](?=\s|$)/g;
+    let m;
+    while ((m = re.exec(t))) {
+        if (m.index >= 20) return t.slice(0, m.index + 1);
+    }
+    return t;
 }
 
 function sortBlocks(blocks) {
@@ -642,7 +671,7 @@ async function buildPacket() {
 
     for (const node of (world.nodes || [])) {
         const span = parseSpan(node?.date);
-        if (!span || !Array.isArray(node.blocks)) continue;
+        if (!span || !Array.isArray(node.blocks) || node.enabled === false) continue;
         const key = startKey(span.start);
         const live = node.blocks.filter(b => b.enabled !== false && String(b.content ?? '').trim());
         if (!live.length) continue;
@@ -650,7 +679,10 @@ async function buildPacket() {
         const status = spanStatus(span, nowLimit);
         // recency for scoring: an ongoing period counts as "now"; an ended one as its last day
         const rkey = status === 'ongoing' ? nowLimit : (span.range && span.end ? startKey(span.end) : key);
-        for (const b of live) candidates.push({ node, block: b.constant === undefined ? { ...b, constant: true } : b, key, rkey, status });
+        for (const b of live) {
+            const constant = effConst(node, b);
+            candidates.push({ node, block: b.constant === constant ? b : { ...b, constant }, key, rkey, status });
+        }
     }
 
     // 2) "replaces earlier": older entries of the same person/pair are superseded.
@@ -676,7 +708,17 @@ async function buildPacket() {
         });
     }
     const replaced = replacedList.length;
-    const rbase = { ...base, excluded, replaced, replacedList };
+    const rbase = { ...base, excluded, replaced, replacedList, compressed: 0 };
+
+    // 2b) optional: older points go in as their first sentence only
+    if (s.compressOld) {
+        const keep = Math.max(1, Number(s.compressKeep) || 12);
+        const recent = [...new Set(candidates.map(c => c.rkey))].sort((a, b) => b - a);
+        if (recent.length > keep) {
+            const threshold = recent[keep - 1];
+            for (const c of candidates) c.compress = c.rkey < threshold;
+        }
+    }
     if (!candidates.length) return rbase;
 
     // 3) inclusion (pinned or keyword hit) + characters present in the scene
@@ -739,7 +781,7 @@ async function buildPacket() {
     const pinnedNodes = new Set();
 
     for (const p of byScore) {
-        p.line = renderBlockLine(p.block, p.pastBy);
+        p.line = renderBlockLine(p.compress ? { ...p.block, content: firstSentence(p.block.content) } : p.block, p.pastBy);
         const nodeCost = seenNodes.has(p.node.id) ? 0 : 6;
         // Only run the real tokenizer when the line could still fit; a cheap
         // lower-bound estimate rules out the rest (big speed-up on large worlds).
@@ -779,6 +821,7 @@ async function buildPacket() {
 
     // header + per-line costs already counted (cached), so no second pass over the whole text
     const tokens = total + await countTokens(head + '\n</chronicle>');
+    rbase.compressed = used.filter(p => p.compress).length;
     return { ...rbase, text, used, dropped, tokens, pinnedTokens };
 }
 
@@ -852,9 +895,11 @@ function exportText(world) {
     out.push('# [날짜] 아래에 칸 종류(스토리/인물/관계/환경), 그 아래 옵션 줄(키워드:, 우선도:, 아는 사람:)과 내용을 씁니다.');
     out.push('# 칸 옵션: [항상] = 항상 삽입, [비밀] = 비밀, [대체] = 같은 이름의 이전 칸 대체, [꺼짐] = 사용 안 함');
     out.push('# 기간: [1970~1981] 처럼 쓰면 그 기간 동안 이어지는 상태가 됩니다. 끝나지 않았으면 [1991~]');
+    out.push('# 시점 옵션 (날짜 뒤): [전부 항상] / [전부 키워드] / [시점 꺼짐]');
     out.push('');
     for (const node of sortNodes(world.nodes || [])) {
-        out.push(`[${formatDate(node.date) || node.date}]`);
+        const nflags = [node.mode === 'pin' ? '[전부 항상]' : node.mode === 'key' ? '[전부 키워드]' : '', node.enabled === false ? '[시점 꺼짐]' : ''].filter(Boolean);
+        out.push(`[${formatDate(node.date) || node.date}]${nflags.length ? ' ' + nflags.join(' ') : ''}`);
         for (const b of sortBlocks(node.blocks)) {
             const t = BLOCK_TYPES[b.type];
             let head = `  ${t.ko}`;
@@ -899,10 +944,16 @@ function parseText(text) {
 
     for (const raw of lines) {
         const line = raw.trim();
-        const dateM = line.match(/^\[([^\]]+)\]$/);
+        const dateM = line.match(/^\[([^\]]+)\]((?:\s*\[[^\]]*\])*)$/);
         if (dateM && parseSpan(dateM[1].trim())) {
             finishBlock();
-            node = { id: uid(), date: formatDate(dateM[1].trim()), blocks: [] };
+            node = makeNode(formatDate(dateM[1].trim()));
+            for (const f of (dateM[2] || '').matchAll(/\[([^\]]*)\]/g)) {
+                const flag = f[1].replace(/\s+/g, '');
+                if (/^(전부항상|항상|allpinned|pinned)$/i.test(flag)) node.mode = 'pin';
+                else if (/^(전부키워드|키워드|allkeyword|keyword)$/i.test(flag)) node.mode = 'key';
+                else if (/^(시점꺼짐|꺼짐|off|disabled)$/i.test(flag)) node.enabled = false;
+            }
             nodes.push(node);
             continue;
         }
@@ -1352,6 +1403,8 @@ function refreshPanel() {
     $('#chronicle_role').val(String(s.role));
     $('#chronicle_replacedmode').val(s.replacedMode);
     $('#chronicle_castmode').val(s.castMode);
+    $('#chronicle_compress').prop('checked', !!s.compressOld);
+    $('#chronicle_compresskeep').val(s.compressKeep);
     $('#chronicle_castbonus').val(s.castBonus);
     $('#chronicle_castbonus_val').text(s.castBonus);
     $('#chronicle_header').val(s.header);
@@ -1370,6 +1423,7 @@ function renderStatus(packet) {
     if (packet.excluded) parts.push(`미래 차단 ${packet.excluded}`);
     if (packet.replaced) parts.push(packet.replacedMode === 'drop' ? `대체로 제외 ${packet.replaced}` : `과거 기록 ${packet.replaced}`);
     if (packet.castOut) parts.push(`등장 인물 외 제외 ${packet.castOut}`);
+    if (packet.compressed) parts.push(`줄여 넣음 ${packet.compressed}`);
     if (packet.dropped?.length) parts.push(`예산 초과 ${packet.dropped.length}`);
     let text = parts.join('  |  ');
     const budget = Number(getSettings().tokenBudget || 0);
@@ -1566,6 +1620,13 @@ function bindPanel() {
     $('#chronicle_replacedmode').on('change', function () {
         getSettings().replacedMode = String($(this).val()); saveSettings(); updateInjection();
     });
+    $('#chronicle_compress').on('change', function () {
+        getSettings().compressOld = !!$(this).prop('checked'); saveSettings(); updateInjection();
+    });
+    $('#chronicle_compresskeep').on('input', function () {
+        const n = Number($(this).val());
+        if (Number.isFinite(n) && n >= 1) { getSettings().compressKeep = n; saveSoon(); updateSoon(); }
+    });
     $('#chronicle_castmode').on('change', function () {
         getSettings().castMode = String($(this).val()); saveSettings(); updateInjection();
     });
@@ -1651,6 +1712,7 @@ async function openPreview() {
             ${packet.replaced ? stat(packet.replacedMode === 'drop' ? '대체로 제외' : '과거 기록', packet.replaced + '개') : ''}
             ${getSettings().castMode !== 'off' ? stat('등장 인물', packet.cast.length ? packet.cast.slice(0, 8).join(', ') + (packet.cast.length > 8 ? ` 외 ${packet.cast.length - 8}명` : '') : '없음') : ''}
             ${packet.castOut ? stat('등장 인물 외 제외', packet.castOut + '개') : ''}
+            ${packet.compressed ? stat('줄여 넣음', packet.compressed + '개') : ''}
         </div>
         ${over ? `<div class="chr-warnbar"><i class="fa-solid fa-triangle-exclamation"></i>핀(항상) 글만 약 ${packet.pinnedTokens} 토큰으로 예산을 넘습니다.</div>` : ''}
         <div class="chr-preview-tools">
@@ -2133,6 +2195,17 @@ function ctxOf($el) {
     return { nodeId: $el.closest('[data-node]').data('node'), blockId: $b.length ? $b.data('block') : null };
 }
 
+/** Update the "키워드 없음 N" chip on a point header without re-rendering it */
+function refreshDeadChip($node, node) {
+    if (!node || !$node?.length) return;
+    const dead = node.enabled === false ? 0 : deadBlocks(node).length;
+    const $chip = $node.find('> .chr-node-head .chr-tag-warn');
+    if (!dead) { $chip.remove(); return; }
+    const html = `<i class="fa-solid fa-triangle-exclamation"></i> 키워드 없음 ${dead}`;
+    if ($chip.length) $chip.html(html);
+    else $node.find('> .chr-node-head .chr-node-spacer').before(`<span class="chr-node-tag chr-tag-warn" title="키워드가 없어 절대 들어가지 않는 칸이 ${dead}개 있습니다.">${html}</span>`);
+}
+
 function pushUndo(entry) {
     _undo.push(entry);
     if (_undo.length > UNDO_MAX) _undo.shift();
@@ -2148,6 +2221,7 @@ function bindEditorEvents($nodes, world, render) {
 
     const rerenderBlocks = ($node, node) => {
         $node.find('.chr-blocks').html(renderBlocksHtml(node));
+        refreshDeadChip($node, node);
         if (_showTr || _trBlocks.size) fillTranslations($node);
     };
 
@@ -2211,6 +2285,7 @@ function bindEditorEvents($nodes, world, render) {
             block.keys = String($t.val()).split(',').map(k => k.trim()).filter(Boolean);
             $t.toggleClass('chr-warnkey', hasShortKey(block.keys));
             refreshGroupHead($t, findNode(world, nodeId));
+            refreshDeadChip($t.closest('[data-node]'), findNode(world, nodeId));
         }
         else if ($t.hasClass('chr-pri')) block.priority = Number($t.val()) || 0;
         else if ($t.hasClass('chr-knownby')) block.knownBy = String($t.val());
@@ -2224,6 +2299,11 @@ function bindEditorEvents($nodes, world, render) {
         if (!block) return;
         const $t = $(this);
         if ($t.hasClass('chr-pin')) {
+            const node = findNode(world, nodeId);
+            if (node && node.mode !== 'auto') {
+                toast('info', `이 시점은 '${node.mode === 'pin' ? '전부 항상' : '전부 키워드'}'로 정해져 있습니다. 시점 머리줄에서 '칸별'로 바꾸면 칸마다 정할 수 있습니다.`);
+                return;
+            }
             block.constant = !block.constant;
             $t.toggleClass('chr-on', block.constant)
                 .attr('title', block.constant
@@ -2238,6 +2318,7 @@ function bindEditorEvents($nodes, world, render) {
             $t.toggleClass('chr-on', block.replaces);
         }
         refreshGroupHead($t, findNode(world, nodeId));
+        refreshDeadChip($t.closest('[data-node]'), findNode(world, nodeId));
         saveSoon(); updateSoon();
     });
 
@@ -2270,6 +2351,7 @@ function bindEditorEvents($nodes, world, render) {
         $(this).closest('[data-block]').toggleClass('chr-off', !block.enabled);
         $(this).find('i').attr('class', `fa-solid ${block.enabled ? 'fa-eye' : 'fa-eye-slash'}`);
         refreshGroupHead($(this), findNode(world, nodeId));
+        refreshDeadChip($(this).closest('[data-node]'), findNode(world, nodeId));
         saveSoon(); updateSoon();
     });
 
@@ -2296,6 +2378,35 @@ function bindEditorEvents($nodes, world, render) {
         if (_openGroups.has(key)) _openGroups.delete(key); else _openGroups.add(key);
         $(this).closest('.chr-group').toggleClass('chr-open', _openGroups.has(key));
         if (_showTr || _trBlocks.size) fillTranslations($(this).closest('.chr-group'));
+    });
+
+    const rerenderNode = (nodeId) => {
+        const node = findNode(world, nodeId);
+        const el = $nodes.find(`[data-node="${nodeId}"]`)[0];
+        if (!node || !el) return;
+        const conf = getChatConf();
+        const nowLimit = conf.now ? endKey(parseDate(conf.now)) : null;
+        el.outerHTML = renderNodeHtml(node, nowLimit);
+        if (_showTr || _trBlocks.size) fillTranslations($nodes.find(`[data-node="${nodeId}"]`));
+    };
+
+    $nodes.on('click', '[data-act="node-mode"]', function () {
+        const { nodeId } = ctxOf($(this));
+        const node = findNode(world, nodeId);
+        if (!node) return;
+        const i = NODE_MODES.indexOf(node.mode || 'auto');
+        node.mode = NODE_MODES[(i + 1) % NODE_MODES.length];
+        rerenderNode(nodeId);
+        saveSoon(); updateSoon();
+    });
+
+    $nodes.on('click', '[data-act="node-toggle"]', function () {
+        const { nodeId } = ctxOf($(this));
+        const node = findNode(world, nodeId);
+        if (!node) return;
+        node.enabled = node.enabled === false;
+        rerenderNode(nodeId);
+        saveSoon(); updateSoon();
     });
 
     $nodes.on('click', '[data-act="node-fold"]', function () {
@@ -2386,8 +2497,9 @@ function matchesSearch(node) {
 const _openGroups = new Set();
 const groupKey = (nodeId, type) => `${nodeId}:${type}`;
 
-function renderOneBlock(b) {
+function renderOneBlock(b, nodeMode = 'auto') {
     const t = BLOCK_TYPES[b.type] ?? BLOCK_TYPES.story;
+    const forced = nodeMode === 'pin' ? true : nodeMode === 'key' ? false : null;
     const label = t.named
         ? `<input type="text" class="text_pole chr-name" value="${esc(b.name)}" placeholder="${t.ko}명">`
         : `<span>${t.ko}</span>`;
@@ -2399,9 +2511,9 @@ function renderOneBlock(b) {
             <textarea class="text_pole chr-content" rows="2" placeholder="프롬프트에 들어갈 내용">${esc(b.content)}</textarea>
             ${_showTr || _trBlocks.has(b.id) ? '<div class="chr-tr">번역 중…</div>' : ''}
             <div class="chr-block-opts">
-                <div class="chr-pin ${b.constant ? 'chr-on' : ''}" title="${b.constant
-        ? '핀 켜짐 — 항상 삽입됩니다 (누르면 끔)'
-        : '핀 꺼짐 — 키워드가 나올 때만 삽입됩니다 (누르면 켬)'}">
+                <div class="chr-pin ${(forced ?? b.constant) ? 'chr-on' : ''} ${forced !== null ? 'chr-forced' : ''}" title="${forced !== null
+        ? `시점 설정(${forced ? '전부 항상' : '전부 키워드'})이 적용 중 — 칸별 핀은 '칸별'로 되돌리면 다시 쓰입니다`
+        : b.constant ? '핀 켜짐 — 항상 삽입됩니다 (누르면 끔)' : '핀 꺼짐 — 키워드가 나올 때만 삽입됩니다 (누르면 켬)'}">
                     <i class="fa-solid fa-thumbtack"></i>항상
                 </div>
                 <input type="text" class="text_pole chr-keys ${shortKey ? 'chr-warnkey' : ''}" value="${esc(b.keys.join(', '))}" placeholder="키워드 (쉼표로 구분)" title="한 글자 키워드는 엉뚱한 단어에 걸리기 쉽습니다">
@@ -2430,12 +2542,14 @@ function groupHeadInner(node, type, list) {
         .filter(Boolean).join('  ·  ');
     const hidden = list.filter(b => !b.enabled).length;
     const live = list.filter(b => b.enabled);
-    const pinned = live.filter(b => b.constant).length;
-    const dead = live.filter(b => !b.constant && !b.keys.length).length;
+    const pinned = live.filter(b => effConst(node, b)).length;
+    const dead = live.filter(b => !effConst(node, b) && !b.keys.length).length;
     const secrets = live.filter(b => b.secret).length;
 
     let mark = '';
-    if (live.length && pinned === live.length) {
+    if (node.mode !== 'auto' && live.length) {
+        // the point-level setting decides; the per-entry pins are ignored
+    } else if (live.length && pinned === live.length) {
         mark = `<span class="chr-mark chr-mark--pin" title="${t.ko} ${live.length}개 모두 항상 삽입됩니다"><i class="fa-solid fa-thumbtack"></i>항상</span>`;
     } else if (live.length && pinned === 0) {
         mark = '<span class="chr-mark chr-mark--key" title="항상 삽입이 하나도 없습니다 — 키워드가 나올 때만 삽입됩니다"><i class="fa-solid fa-key"></i>키워드</span>';
@@ -2469,7 +2583,7 @@ function renderBlocksHtml(node) {
         html += `
         <div class="chr-group ${open ? 'chr-open' : ''}" data-group="${type}" data-type="${type}">
             <div class="chr-group-head">${groupHeadInner(node, type, list)}</div>
-            <div class="chr-group-body">${list.map(renderOneBlock).join('')}</div>
+            <div class="chr-group-body">${list.map(b => renderOneBlock(b, node.mode)).join('')}</div>
         </div>`;
     }
     return html;
@@ -2498,48 +2612,65 @@ function renderNodes($nodes, world) {
         return;
     }
 
-    const html = shown.map(node => {
-        const span = parseSpan(node.date || '');
-        const dt = span ? span.start : null;
-        const key = nodeKey(node);
-        const bad = node.date && dt === null;
-        const checked = dt !== null && (nowLimit === null || key <= nowLimit);
-        const boundary = dt !== null && !span.range && nowLimit !== null && endKey(dt) === nowLimit;
-        const status = span && checked ? spanStatus(span, nowLimit) : 'point'; // future periods get no tag
-        const rangeTag = status === 'ongoing' ? '<span class="chr-node-tag chr-tag-ongoing">진행 중</span>'
-            : status === 'ended' ? '<span class="chr-node-tag chr-tag-ended">종료</span>'
-                : status === 'range' ? '<span class="chr-node-tag chr-tag-ended">기간</span>' : '';
+    $nodes.append(shown.map(node => renderNodeHtml(node, nowLimit)).join(''));
+}
 
-        const checkTitle = dt === null
-            ? '날짜를 먼저 입력하세요 (기간은 1970~1981 처럼)'
-            : boundary ? '기준 시점 — 다시 누르면 해제'
-                : '여기까지를 기준 시점으로 (맨 위부터 자동 체크)';
+const NODE_MODE_UI = {
+    auto: { label: '칸별', icon: 'fa-list-check', title: '칸마다 정한 핀/키워드를 따릅니다' },
+    pin: { label: '전부 항상', icon: 'fa-thumbtack', title: '이 시점의 모든 칸을 조건 없이 넣습니다' },
+    key: { label: '전부 키워드', icon: 'fa-key', title: '이 시점의 모든 칸을 키워드가 나올 때만 넣습니다' },
+};
 
-        return `
-        <div class="chr-node ${checked ? '' : 'chr-future'} ${boundary ? 'chr-boundary' : ''}" data-node="${esc(node.id)}">
-            <div class="chr-node-head">
-                <div class="chr-check ${checked ? 'chr-on' : ''} ${dt === null ? 'chr-disabled' : ''}" title="${checkTitle}">
-                    <i class="fa-${checked ? 'solid' : 'regular'} ${checked ? 'fa-square-check' : 'fa-square'}"></i>
-                </div>
-                <input type="text" class="text_pole chr-date ${bad ? 'chr-invalid' : ''}"
-                       value="${esc(node.date)}" placeholder="2015-01-01" title="시점: 2015 / 2015-06 / 2015-06-20 · 기간: 1970~1981 / 끝나지 않음: 1991~">
-                ${boundary ? '<span class="chr-node-tag">기준 시점</span>' : ''}${rangeTag}
-                <div class="chr-node-spacer"></div>
-                <div class="chr-node-actions">
-                    <div class="chr-ico" data-act="node-fold" title="이 시점 전부 접기 / 펴기"><i class="fa-solid fa-chevron-down"></i></div>
-                    <div class="chr-ico" data-add="story" title="스토리 추가"><i class="fa-solid fa-book-open"></i></div>
-                    <div class="chr-ico" data-add="character" title="인물 추가"><i class="fa-solid fa-user-plus"></i></div>
-                    <div class="chr-ico" data-add="relation" title="관계 추가"><i class="fa-solid fa-link"></i></div>
-                    <div class="chr-ico" data-add="environment" title="환경 추가"><i class="fa-solid fa-globe"></i></div>
-                    <div class="chr-ico" data-act="node-dup" title="이 시점 복제"><i class="fa-solid fa-copy"></i></div>
-                    <div class="chr-ico chr-danger" data-act="node-del" title="이 시점 삭제"><i class="fa-solid fa-trash-can"></i></div>
-                </div>
+function renderNodeHtml(node, nowLimit) {
+    const span = parseSpan(node.date || '');
+    const dt = span ? span.start : null;
+    const key = nodeKey(node);
+    const bad = node.date && dt === null;
+    const checked = dt !== null && (nowLimit === null || key <= nowLimit);
+    const boundary = dt !== null && !span.range && nowLimit !== null && endKey(dt) === nowLimit;
+    const status = span && checked ? spanStatus(span, nowLimit) : 'point'; // future periods get no tag
+    const rangeTag = status === 'ongoing' ? '<span class="chr-node-tag chr-tag-ongoing">진행 중</span>'
+        : status === 'ended' ? '<span class="chr-node-tag chr-tag-ended">종료</span>'
+            : status === 'range' ? '<span class="chr-node-tag chr-tag-ended">기간</span>' : '';
+
+    const mode = NODE_MODES.includes(node.mode) ? node.mode : 'auto';
+    const ui = NODE_MODE_UI[mode];
+    const off = node.enabled === false;
+    const dead = deadBlocks(node).length;
+    const modeChip = `<div class="chr-nmode chr-nmode--${mode}" data-act="node-mode" title="${ui.title} (누르면 바뀜: 칸별 → 전부 항상 → 전부 키워드)"><i class="fa-solid ${ui.icon}"></i>${ui.label}</div>`;
+    const deadChip = dead && !off
+        ? `<span class="chr-node-tag chr-tag-warn" title="${mode === 'key' ? '이 시점은 전부 키워드인데' : '핀이 꺼져 있는데'} 키워드가 없는 칸이 ${dead}개 있습니다. 이 칸들은 절대 들어가지 않습니다."><i class="fa-solid fa-triangle-exclamation"></i> 키워드 없음 ${dead}</span>`
+        : '';
+    const checkTitle = dt === null
+        ? '날짜를 먼저 입력하세요 (기간은 1970~1981 처럼)'
+        : boundary ? '기준 시점 — 다시 누르면 해제'
+            : '여기까지를 기준 시점으로 (맨 위부터 자동 체크)';
+
+    return `
+    <div class="chr-node ${checked ? '' : 'chr-future'} ${boundary ? 'chr-boundary' : ''} ${off ? 'chr-node-off' : ''}" data-node="${esc(node.id)}">
+        <div class="chr-node-head">
+            <div class="chr-check ${checked ? 'chr-on' : ''} ${dt === null ? 'chr-disabled' : ''}" title="${checkTitle}">
+                <i class="fa-${checked ? 'solid' : 'regular'} ${checked ? 'fa-square-check' : 'fa-square'}"></i>
             </div>
-            <div class="chr-blocks">${renderBlocksHtml(node)}</div>
-        </div>`;
-    }).join('');
-
-    $nodes.append(html);
+            <input type="text" class="text_pole chr-date ${bad ? 'chr-invalid' : ''}"
+                   value="${esc(node.date)}" placeholder="2015-01-01" title="시점: 2015 / 2015-06 / 2015-06-20 · 기간: 1970~1981 / 끝나지 않음: 1991~">
+            ${boundary ? '<span class="chr-node-tag">기준 시점</span>' : ''}${rangeTag}
+            ${off ? '<span class="chr-node-tag chr-tag-ended">시점 꺼짐</span>' : ''}${deadChip}
+            <div class="chr-node-spacer"></div>
+            ${modeChip}
+            <div class="chr-node-actions">
+                <div class="chr-ico" data-act="node-fold" title="이 시점 전부 접기 / 펴기"><i class="fa-solid fa-chevron-down"></i></div>
+                <div class="chr-ico" data-add="story" title="스토리 추가"><i class="fa-solid fa-book-open"></i></div>
+                <div class="chr-ico" data-add="character" title="인물 추가"><i class="fa-solid fa-user-plus"></i></div>
+                <div class="chr-ico" data-add="relation" title="관계 추가"><i class="fa-solid fa-link"></i></div>
+                <div class="chr-ico" data-add="environment" title="환경 추가"><i class="fa-solid fa-globe"></i></div>
+                <div class="chr-ico" data-act="node-toggle" title="${off ? '시점 꺼짐 — 누르면 켬' : '이 시점 통째로 끄기'}"><i class="fa-solid ${off ? 'fa-eye-slash' : 'fa-eye'}"></i></div>
+                <div class="chr-ico" data-act="node-dup" title="이 시점 복제"><i class="fa-solid fa-copy"></i></div>
+                <div class="chr-ico chr-danger" data-act="node-del" title="이 시점 삭제"><i class="fa-solid fa-trash-can"></i></div>
+            </div>
+        </div>
+        <div class="chr-blocks">${renderBlocksHtml(node)}</div>
+    </div>`;
 }
 
 // ==================================================================

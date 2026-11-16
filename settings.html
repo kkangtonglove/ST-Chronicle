@@ -166,6 +166,17 @@
                 <input id="chronicle_budget" type="number" class="text_pole" min="100" max="60000" step="100">
                 <small class="chr-hint">연대기가 차지할 최대 토큰. 넘치면 점수가 낮은(오래된) 것부터 잘립니다.</small>
 
+                <label class="checkbox_label" for="chronicle_compress">
+                    <input id="chronicle_compress" type="checkbox">
+                    <span>오래된 칸 줄여 넣기</span>
+                </label>
+                <div class="chr-row">
+                    <span class="chr-key">전문 유지</span>
+                    <input id="chronicle_compresskeep" type="number" class="text_pole" min="1" max="500" step="1">
+                    <span class="chr-key">개 시점</span>
+                </div>
+                <small class="chr-hint">켜면 가장 최근 시점 몇 개만 내용 전체를 넣고, 그보다 오래된 칸은 첫 문장만 넣습니다. 진행 중인 기간은 최근으로 칩니다. 토큰을 크게 줄입니다.</small>
+
                 <div class="chr-sec">최신 우선 가중치</div>
                 <div class="chr-slider">
                     <input id="chronicle_recency" type="range" min="0" max="200" step="5">
