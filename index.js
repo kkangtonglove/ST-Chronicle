@@ -533,9 +533,9 @@ function mergeNodes(target, incoming) {
 // Prompt assembly
 // ==================================================================
 
-function getScanText(depth) {
+function getScanText(depth, source) {
     try {
-        const arr = Array.isArray(chat) ? chat : [];
+        const arr = Array.isArray(source) ? source : (Array.isArray(chat) ? chat : []);
         return arr.slice(-Math.max(1, depth)).map(m => String(m?.mes ?? '')).join('\n').toLowerCase();
     } catch (e) {
         warn('대화 스캔 실패', e);
@@ -672,7 +672,8 @@ function getCastNames() {
 }
 
 /** Build the chronicle block for the current state. */
-async function buildPacket() {
+/** @param {object[]} [scanChat] messages to scan for keywords (defaults to the live chat) */
+async function buildPacket(scanChat) {
     const s = getSettings();
     const world = getActiveWorld();
     const conf = getChatConf();
@@ -740,7 +741,7 @@ async function buildPacket() {
     if (!candidates.length) return rbase;
 
     // 3) inclusion (pinned or keyword hit) + characters present in the scene
-    const scanText = getScanText(s.scanDepth);
+    const scanText = getScanText(s.scanDepth, scanChat);
     const castMode = s.castMode || 'off';
     const castTokens = new Set(getCastNames().flatMap(nameTokens));
     const presentNames = new Set(getCastNames());
@@ -865,16 +866,17 @@ function clearInjection() {
 }
 
 let _chain = Promise.resolve();
-function updateInjection() {
-    _chain = _chain.then(doUpdate, doUpdate);
+function updateInjection(scanChat) {
+    const run = () => doUpdate(scanChat);
+    _chain = _chain.then(run, run);
     return _chain;
 }
 
-async function doUpdate() {
+async function doUpdate(scanChat) {
     try {
         const s = getSettings();
         if (!s.enabled) { clearInjection(); renderStatus(null); return; }
-        const packet = await buildPacket();
+        const packet = await buildPacket(Array.isArray(scanChat) ? scanChat : undefined);
         setExtensionPrompt(INJECT_KEY, packet.text, positionType(s.position),
             Number(s.depth || 0), false, roleValue(s.role));
         log(`주입 ${packet.used.length}개 / ${packet.tokens} 토큰 (미래 차단 ${packet.excluded} · 대체 ${packet.replaced} · 예산 초과 ${packet.dropped.length})`);
@@ -2863,12 +2865,12 @@ jQuery(async () => {
             refreshPanel();
             await updateInjection();
         });
-        // Rebuild right before each real generation (keywords depend on the latest messages).
-        // Dry runs (prompt previews / token counts) reuse the last result.
-        eventSource.on(event_types.GENERATION_STARTED, async (_type, _opts, dryRun) => {
-            if (dryRun) return;
-            await updateInjection();
-        });
+        // Keyword scanning happens in the generation interceptor (see manifest.json):
+        // SillyTavern calls it after the user's new message is added to the chat and
+        // before the prompt is assembled, so a keyword in the message just sent triggers.
+        globalThis.chronicleInterceptor = async (coreChat) => {
+            await updateInjection(coreChat);
+        };
 
         await updateInjection();
         console.log('[크로니클] 확장을 불러왔습니다.');
