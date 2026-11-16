@@ -1816,9 +1816,7 @@ async function openPreview() {
         }
     });
 
-    await callGenericPopup(el, POPUP_TYPE.TEXT, '', {
-        wide: true, large: true, okButton: '닫기', allowVerticalScrolling: true,
-    });
+    await showPopup(el, 'chr-x-preview');
 }
 
 // ==================================================================
@@ -2078,11 +2076,18 @@ async function openAiGenerator() {
         ui.log(`'${world.name}' 에 등록했습니다.`);
     });
 
-    await callGenericPopup(root, POPUP_TYPE.TEXT, '', {
-        wide: true, large: true, okButton: '닫기', allowVerticalScrolling: true,
-    });
+    await showPopup(root, 'chr-x-ai');
     ui.cancelled = true;
     try { ui.controller?.abort(); } catch { /* noop */ }
+}
+
+/** Open one of our popups and tag it with a class (cheaper than CSS :has()). */
+function showPopup(el, cls) {
+    const pr = callGenericPopup(el, POPUP_TYPE.TEXT, '', {
+        wide: true, large: true, okButton: '닫기', allowVerticalScrolling: true,
+    });
+    el.closest('.popup')?.classList.add('chr-popup', cls);
+    return pr;
 }
 
 /** Fill every empty .chr-tr under $scope (sequential, cached). */
@@ -2119,6 +2124,7 @@ const UNDO_MAX = 30;
 const _trBlocks = new Set();
 
 function flashNode($nodes, nodeId) {
+    ensureNodeRendered($nodes, nodeId);
     const el = $nodes.find(`[data-node="${nodeId}"]`)[0];
     if (!el) return;
     el.scrollIntoView({ block: 'center', behavior: 'smooth' });
@@ -2195,9 +2201,10 @@ async function openEditor() {
         render();
     });
 
+    const renderSearch = debounce(() => render(), 220);
     $root.find('.chr-search').val(_search).on('input', function () {
         _search = String($(this).val()).toLowerCase();
-        render();
+        renderSearch();
     });
 
     $root.find('[data-act="clear-now"]').on('click', () => {
@@ -2220,9 +2227,9 @@ async function openEditor() {
     bindEditorEvents($nodes, world, render);
     render();
 
-    await callGenericPopup(root, POPUP_TYPE.TEXT, '', {
-        wide: true, large: true, okButton: '닫기', allowVerticalScrolling: true,
-    });
+    const closed = showPopup(root, 'chr-x-editor');
+    bindChunkScroll($nodes);
+    await closed;
 
     saveSettings();
     refreshPanel();
@@ -2426,7 +2433,9 @@ function bindEditorEvents($nodes, world, render) {
         const type = String($(this).closest('.chr-group').data('group'));
         const key = groupKey(nodeId, type);
         if (_openGroups.has(key)) _openGroups.delete(key); else _openGroups.add(key);
-        $(this).closest('.chr-group').toggleClass('chr-open', _openGroups.has(key));
+        const $group = $(this).closest('.chr-group');
+        if (_openGroups.has(key)) fillGroupBody($group, findNode(world, nodeId));
+        $group.toggleClass('chr-open', _openGroups.has(key));
         if (_showTr || _trBlocks.size) fillTranslations($(this).closest('.chr-group'));
     });
 
@@ -2471,6 +2480,7 @@ function bindEditorEvents($nodes, world, render) {
         }
         const $node = $(this).closest('[data-node]');
         $node.find('.chr-group').each(function () {
+            if (!anyOpen) fillGroupBody($(this), node);
             $(this).toggleClass('chr-open', !anyOpen);
         });
         $(this).find('i').attr('class', `fa-solid ${anyOpen ? 'fa-chevron-down' : 'fa-chevron-up'}`);
@@ -2541,6 +2551,14 @@ function matchesSearch(node) {
         String(b.name).toLowerCase().includes(_search) ||
         String(b.content).toLowerCase().includes(_search) ||
         (b.keys || []).join(',').toLowerCase().includes(_search));
+}
+
+/** Folded groups are rendered empty; fill a group's entries the first time it opens. */
+function fillGroupBody($group, node) {
+    const body = $group.children('.chr-group-body')[0];
+    if (!body || body.childElementCount || !node) return;
+    const type = String($group.data('group'));
+    body.innerHTML = (node.blocks || []).filter(b => b.type === type).map(b => renderOneBlock(b, node.mode)).join('');
 }
 
 /** Open groups (nodeId:type) — kept across re-renders */
@@ -2633,7 +2651,7 @@ function renderBlocksHtml(node) {
         html += `
         <div class="chr-group ${open ? 'chr-open' : ''}" data-group="${type}" data-type="${type}">
             <div class="chr-group-head">${groupHeadInner(node, type, list)}</div>
-            <div class="chr-group-body">${list.map(b => renderOneBlock(b, node.mode)).join('')}</div>
+            <div class="chr-group-body">${open ? list.map(b => renderOneBlock(b, node.mode)).join('') : ''}</div>
         </div>`;
     }
     return html;
@@ -2662,7 +2680,50 @@ function renderNodes($nodes, world) {
         return;
     }
 
-    $nodes.append(shown.map(node => renderNodeHtml(node, nowLimit)).join(''));
+    $nodes.data({ chrShown: shown, chrRendered: 0, chrNow: nowLimit });
+    appendNodeChunk($nodes);
+}
+
+const NODE_CHUNK = 50;
+
+/** Append the next batch of points (or up to `upto`), with a sentinel that loads more on scroll. */
+function appendNodeChunk($nodes, upto) {
+    const shown = $nodes.data('chrShown') || [];
+    const from = $nodes.data('chrRendered') || 0;
+    const to = Math.min(shown.length, Math.max(upto ?? 0, from + NODE_CHUNK));
+    if (to <= from) return;
+    $nodes.children('.chr-more').remove();
+    const nowLimit = $nodes.data('chrNow');
+    let html = '';
+    for (let i = from; i < to; i++) html += renderNodeHtml(shown[i], nowLimit);
+    $nodes.append(html);
+    $nodes.data('chrRendered', to);
+    if (to < shown.length) {
+        const more = $(`<div class="chr-more menu_button">시점 ${shown.length - to}개 더 보기</div>`);
+        more.on('click', () => appendNodeChunk($nodes));
+        $nodes.append(more);
+    }
+}
+
+/** Load the next batch when the popup is scrolled near the bottom. */
+function bindChunkScroll($nodes) {
+    const sc = $nodes.closest('.popup-content')[0];
+    if (!sc || sc.dataset.chrScroll) return;
+    sc.dataset.chrScroll = '1';
+    let busy = false;
+    sc.addEventListener('scroll', () => {
+        if (busy || !$nodes.children('.chr-more').length) return;
+        if (sc.scrollTop + sc.clientHeight < sc.scrollHeight - 900) return;
+        busy = true;
+        requestAnimationFrame(() => { appendNodeChunk($nodes); busy = false; });
+    }, { passive: true });
+}
+
+/** Make sure a point is in the DOM (render the batches before it). */
+function ensureNodeRendered($nodes, nodeId) {
+    const shown = $nodes.data('chrShown') || [];
+    const i = shown.findIndex(n => n.id === nodeId);
+    if (i >= ($nodes.data('chrRendered') || 0)) appendNodeChunk($nodes, i + 10);
 }
 
 const NODE_MODE_UI = {

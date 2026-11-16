@@ -1400,18 +1400,18 @@
    Popups — fill the screen properly (no blank band at the bottom)
    ========================================================== */
 
-.popup:has(.chr-editor) .popup-content,
-.popup:has(.chr-ai) .popup-content,
-.popup:has(.chr-preview) .popup-content {
+.popup.chr-x-editor .popup-content,
+.popup.chr-x-ai .popup-content,
+.popup.chr-x-preview .popup-content {
     scrollbar-width: thin;
     scrollbar-color: rgba(140, 140, 140, 0.6) transparent;
     overscroll-behavior: contain;
 }
 
 @media (max-width: 1000px) {
-    .popup:has(.chr-editor),
-    .popup:has(.chr-ai),
-    .popup:has(.chr-preview) {
+    .popup.chr-x-editor,
+    .popup.chr-x-ai,
+    .popup.chr-x-preview {
         width: 100dvw !important;
         min-width: 0 !important;
         max-width: 100dvw !important;
@@ -1422,17 +1422,17 @@
         border-radius: 0;
     }
 
-    .popup:has(.chr-editor) .popup-body,
-    .popup:has(.chr-ai) .popup-body,
-    .popup:has(.chr-preview) .popup-body {
+    .popup.chr-x-editor .popup-body,
+    .popup.chr-x-ai .popup-body,
+    .popup.chr-x-preview .popup-body {
         max-height: none;
         height: 100%;
         min-height: 0;
     }
 
-    .popup:has(.chr-editor) .popup-content,
-    .popup:has(.chr-ai) .popup-content,
-    .popup:has(.chr-preview) .popup-content {
+    .popup.chr-x-editor .popup-content,
+    .popup.chr-x-ai .popup-content,
+    .popup.chr-x-preview .popup-content {
         padding: 0 2px;
         min-height: 0;
     }
@@ -1526,3 +1526,11 @@
     background: rgba(127, 127, 127, 0.08);
 }
 #chronicle_settings .chr-worldopts .chr-hint { margin-bottom: 4px; }
+
+/* performance: let the browser skip layout/paint of points that are off screen */
+.chr-nodes > .chr-node {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 150px;
+}
+
+.chr-nodes > .chr-more { margin: 6px auto 4px; padding: 8px 18px; opacity: 0.75; }
