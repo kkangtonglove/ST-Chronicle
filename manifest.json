@@ -6,7 +6,7 @@
     "js": "index.js",
     "css": "style.css",
     "author": "QW",
-    "version": "3.6.1",
+    "version": "3.6.2",
     "homePage": "https://github.com/kkangtonglove/ST-Chronicle",
     "description": "시점마다 스토리/인물/관계/환경을 함께 기록하고, 채팅의 기준 시점까지의 내용만 프롬프트에 주입합니다. AI로 연대기 만들기, 텍스트 불러오기, 보기 전용 번역 지원.",
     "generate_interceptor": "chronicleInterceptor"

@@ -2170,7 +2170,7 @@ async function openEditor() {
         const n = _undo.filter(u => u.worldId === world.id).length;
         $root.find('[data-act="undo"]').toggleClass('chr-disabled', !n).find('.chr-undo-n').text(n ? `(${n})` : '');
     };
-    const render = () => { renderNodes($nodes, world); refreshUndo(); if (_showTr || _trBlocks.size) fillTranslations($nodes); };
+    const render = (changed) => { renderNodesKeep($nodes, world, changed); refreshUndo(); if (_showTr || _trBlocks.size) fillTranslations($nodes); };
 
     $root.find('[data-act="undo"]').on('click', () => {
         const i = _undo.map(u => u.worldId).lastIndexOf(world.id);
@@ -2193,17 +2193,22 @@ async function openEditor() {
             restoredId = node.id;
             toast('success', '칸을 되살렸습니다.');
         }
-        saveSettings(); render(); updateSoon();
+        saveSettings(); render(u.kind === 'node' ? [] : [restoredId]); updateSoon();
         if (restoredId) flashNode($nodes, restoredId);
     });
 
     $root.find('[data-act="tr"]').toggleClass('chr-on', _showTr).on('click', function () {
         _showTr = !_showTr;
         $(this).toggleClass('chr-on', _showTr);
-        render();
+        render((world.nodes || []).map(n => n.id));
     });
 
-    const renderSearch = debounce(() => render(), 220);
+    const renderSearch = debounce(() => {
+        renderNodes($nodes, world); refreshUndo();
+        if (_showTr || _trBlocks.size) fillTranslations($nodes);
+        const sc = $nodes.closest('.popup-content')[0];
+        if (sc) sc.scrollTop = 0;
+    }, 220);
     $root.find('.chr-search').val(_search).on('input', function () {
         _search = String($(this).val()).toLowerCase();
         renderSearch();
@@ -2211,7 +2216,7 @@ async function openEditor() {
 
     $root.find('[data-act="clear-now"]').on('click', () => {
         setChatConf({ now: '' });
-        render(); refreshPanel(); updateInjection();
+        refreshNowState($nodes, world); refreshPanel(); updateInjection();
     });
 
     $root.find('[data-act="add-node"]').on('click', () => {
@@ -2222,7 +2227,7 @@ async function openEditor() {
         render();
         flashNode($nodes, node.id);
         const dateEl = $nodes.find(`[data-node="${node.id}"] .chr-date`)[0];
-        dateEl?.focus();
+        dateEl?.focus({ preventScroll: true });
         dateEl?.select?.();
     });
 
@@ -2299,7 +2304,7 @@ function bindEditorEvents($nodes, world, render) {
         const cur = getChatConf().now ? endKey(parseDate(getChatConf().now)) : null;
         const mine = endKey(span.start);
         setChatConf({ now: (cur !== null && cur === mine && !span.range) ? '' : point });
-        render(); refreshPanel(); updateInjection();
+        refreshNowState($nodes, world); refreshPanel(); updateInjection();
     });
 
     $nodes.on('input', '.chr-date', function () {
@@ -2423,7 +2428,8 @@ function bindEditorEvents($nodes, world, render) {
         if (index < 0) return;
         const [block] = node.blocks.splice(index, 1);
         pushUndo({ kind: 'block', worldId: world.id, nodeId, index, block });
-        rerenderBlocks($(this).closest('[data-node]'), node);
+        const $node = $(this).closest('[data-node]');
+        keepScroll($nodes, $node.find('> .chr-node-head')[0], () => rerenderBlocks($node, node));
         $nodes.closest('.chr-editor').find('[data-act="undo"]').removeClass('chr-disabled')
             .find('.chr-undo-n').text(`(${_undo.filter(u => u.worldId === world.id).length})`);
         saveSettings(); updateSoon();
@@ -2500,10 +2506,10 @@ function bindEditorEvents($nodes, world, render) {
         _openGroups.add(groupKey(nodeId, type));
         saveSettings();
         const $node = $(this).closest('[data-node]');
-        rerenderBlocks($node, node);
+        keepScroll($nodes, $node.find('> .chr-node-head')[0], () => rerenderBlocks($node, node));
         const target = $node.find(`[data-block="${block.id}"]`)[0];
-        target?.scrollIntoView({ block: 'nearest' });
-        target?.querySelector(BLOCK_TYPES[type].named ? '.chr-name' : '.chr-content')?.focus();
+        target?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        target?.querySelector(BLOCK_TYPES[type].named ? '.chr-name' : '.chr-content')?.focus({ preventScroll: true });
     });
 
     $nodes.on('click', '[data-act="node-dup"]', function () {
@@ -2734,7 +2740,7 @@ const NODE_MODE_UI = {
     key: { label: '전부 키워드', icon: 'fa-key', title: '이 시점의 모든 칸을 키워드가 나올 때만 넣습니다' },
 };
 
-function renderNodeHtml(node, nowLimit) {
+function nodeHeadParts(node, nowLimit) {
     const span = parseSpan(node.date || '');
     const dt = span ? span.start : null;
     const key = nodeKey(node);
@@ -2759,9 +2765,8 @@ function renderNodeHtml(node, nowLimit) {
         : boundary ? '기준 시점 — 다시 누르면 해제'
             : '여기까지를 기준 시점으로 (맨 위부터 자동 체크)';
 
-    return `
-    <div class="chr-node ${checked ? '' : 'chr-future'} ${boundary ? 'chr-boundary' : ''} ${off ? 'chr-node-off' : ''}" data-node="${esc(node.id)}">
-        <div class="chr-node-head">
+    const cls = `chr-node ${checked ? '' : 'chr-future'} ${boundary ? 'chr-boundary' : ''} ${off ? 'chr-node-off' : ''}`;
+    const head = `
             <div class="chr-check ${checked ? 'chr-on' : ''} ${dt === null ? 'chr-disabled' : ''}" title="${checkTitle}">
                 <i class="fa-${checked ? 'solid' : 'regular'} ${checked ? 'fa-square-check' : 'fa-square'}"></i>
             </div>
@@ -2780,10 +2785,115 @@ function renderNodeHtml(node, nowLimit) {
                 <div class="chr-ico" data-act="node-toggle" title="${off ? '시점 꺼짐 — 누르면 켬' : '이 시점 통째로 끄기'}"><i class="fa-solid ${off ? 'fa-eye-slash' : 'fa-eye'}"></i></div>
                 <div class="chr-ico" data-act="node-dup" title="이 시점 복제"><i class="fa-solid fa-copy"></i></div>
                 <div class="chr-ico chr-danger" data-act="node-del" title="이 시점 삭제"><i class="fa-solid fa-trash-can"></i></div>
-            </div>
+            </div>`;
+    return { cls, head };
+}
+
+function renderNodeHtml(node, nowLimit) {
+    const { cls, head } = nodeHeadParts(node, nowLimit);
+    return `
+    <div class="${cls}" data-node="${esc(node.id)}">
+        <div class="chr-node-head">${head}
         </div>
         <div class="chr-blocks">${renderBlocksHtml(node)}</div>
     </div>`;
+}
+
+/**
+ * The current point changed: update every point header in place.
+ * The point elements stay in the DOM, so the scroll position and the
+ * remembered heights of off-screen points are kept.
+ */
+function refreshNowState($nodes, world) {
+    const conf = getChatConf();
+    const nowLimit = conf.now ? endKey(parseDate(conf.now)) : null;
+    $nodes.data('chrNow', nowLimit);
+    $nodes.closest('.chr-editor').find('.chr-nowtag')
+        .text(conf.now ? `기준 ${formatDate(conf.now)}` : '기준 없음 (전부 포함)')
+        .toggleClass('chr-set', !!conf.now);
+    $nodes.children('[data-node]').each(function () {
+        const node = findNode(world, this.dataset.node);
+        if (!node) return;
+        const { cls, head } = nodeHeadParts(node, nowLimit);
+        if (this.className !== cls) this.className = cls;
+        const h = this.querySelector(':scope > .chr-node-head');
+        if (h) h.innerHTML = head;
+    });
+}
+
+/** Run `fn` and keep `anchor` at the same place on screen. */
+function keepScroll($nodes, anchor, fn) {
+    const sc = $nodes.closest('.popup-content')[0];
+    const before = anchor?.getBoundingClientRect().top;
+    fn();
+    if (sc && anchor?.isConnected && before !== undefined) {
+        const diff = anchor.getBoundingClientRect().top - before;
+        if (diff) sc.scrollTop += diff;
+    }
+}
+
+/**
+ * Redraw the list but reuse the point elements that are already on screen,
+ * so nothing jumps: only removed points disappear and new ones are inserted.
+ * `changed` = ids of points whose content must be redrawn.
+ */
+function renderNodesKeep($nodes, world, changed = []) {
+    const box = $nodes[0];
+    const existing = new Map();
+    for (const el of box.children) if (el.dataset.node) existing.set(el.dataset.node, el);
+    if (!existing.size) { renderNodes($nodes, world); return; }
+
+    const conf = getChatConf();
+    const nowLimit = conf.now ? endKey(parseDate(conf.now)) : null;
+    const all = world.nodes || [];
+    const shown = sortNodes(all.filter(matchesSearch));
+    if (!shown.length) { renderNodes($nodes, world); return; }
+
+    const $ed = $nodes.closest('.chr-editor');
+    $ed.find('.chr-count').text(`${shown.length} / ${all.length} 시점`);
+
+    // anchor: first point visible on screen
+    const sc = $nodes.closest('.popup-content')[0];
+    let anchor = null, anchorTop = 0;
+    if (sc) {
+        const top = sc.getBoundingClientRect().top;
+        for (const el of existing.values()) {
+            const r = el.getBoundingClientRect();
+            if (r.bottom > top) { anchor = el; anchorTop = r.top; break; }
+        }
+    }
+
+    const count = Math.min(shown.length, Math.max($nodes.data('chrRendered') || 0, NODE_CHUNK));
+    const wanted = shown.slice(0, count);
+    const wantedIds = new Set(wanted.map(n => n.id));
+    const redraw = new Set(changed);
+    for (const [id, el] of existing) {
+        if (!wantedIds.has(id) || redraw.has(id)) { el.remove(); existing.delete(id); }
+    }
+    for (const el of [...box.children]) if (!el.dataset.node) el.remove(); // "more" button, empty note
+
+    let cur = box.firstElementChild;
+    for (const node of wanted) {
+        let el = existing.get(node.id);
+        if (!el) {
+            const tmp = document.createElement('div');
+            tmp.innerHTML = renderNodeHtml(node, nowLimit);
+            el = tmp.firstElementChild;
+        }
+        if (el === cur) cur = cur.nextElementSibling;
+        else box.insertBefore(el, cur);
+    }
+    $nodes.data({ chrShown: shown, chrRendered: count, chrNow: nowLimit });
+    if (count < shown.length) {
+        const more = $(`<div class="chr-more menu_button">시점 ${shown.length - count}개 더 보기</div>`);
+        more.on('click', () => appendNodeChunk($nodes));
+        $nodes.append(more);
+    }
+
+    if (sc && anchor?.isConnected) {
+        const diff = anchor.getBoundingClientRect().top - anchorTop;
+        if (diff) sc.scrollTop += diff;
+    }
 }
 
 // ==================================================================
